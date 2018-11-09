@@ -1850,7 +1850,6 @@ Disassembly of section .dynstr:
     28ac:	732e6d62 	.inst	0x732e6d62 ; undefined
     28b0:	696c006f 	ldpsw	x15, x0, [x3, #-160]
     28b4:	2e6c6462 	umax	v2.4h, v3.4h, v12.4h
-    28b8:	Address 0x00000000000028b8 is out of bounds.
 
 
 Disassembly of section .gnu.hash:
@@ -1972,7 +1971,6 @@ Disassembly of section .gnu.version:
     2a90:	00000003 	.inst	0x00000003 ; undefined
     2a94:	00010004 	.inst	0x00010004 ; undefined
     2a98:	00010001 	.inst	0x00010001 ; undefined
-    2a9c:	Address 0x0000000000002a9c is out of bounds.
 
 
 Disassembly of section .gnu.version_r:

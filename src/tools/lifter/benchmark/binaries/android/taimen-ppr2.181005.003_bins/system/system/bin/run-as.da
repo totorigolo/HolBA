@@ -255,7 +255,6 @@ Disassembly of section .dynstr:
  750:	732e6d62 	.inst	0x732e6d62 ; undefined
  754:	696c006f 	ldpsw	x15, x0, [x3, #-160]
  758:	2e6c6462 	umax	v2.4h, v3.4h, v12.4h
- 75c:	Address 0x000000000000075c is out of bounds.
 
 
 Disassembly of section .gnu.hash:
@@ -1211,7 +1210,6 @@ Disassembly of section .rodata:
     155c:	642f0064 	fmla	z4.h, z3.h, z7.h[1]
     1560:	2f617461 	.inst	0x2f617461 ; undefined
     1564:	72657375 	.inst	0x72657375 ; undefined
-    1568:	Address 0x0000000000001568 is out of bounds.
 
 
 Disassembly of section .eh_frame:
