@@ -137,33 +137,55 @@ val bir_wp_comp_wps_iter_step2_cntr = ref 0;
 (* produce wps1 and reestablish bool_sound_thm for this one *)
 fun bir_wp_comp_wps_iter_step2 (wps, wps_bool_sound_thm) prog_l_thm ((program, post, ls), (label)) defs =
     let
-(*
+        (*
         val wps_id_idx = !bir_wp_comp_wps_iter_step2_cntr;
         val _ = (bir_wp_comp_wps_iter_step2_cntr := (!bir_wp_comp_wps_iter_step2_cntr) + 1);
         val wps_id_suffix = Int.toString wps_id_idx;
-*)
-        val wps_id_suffix = (term_to_string o snd o gen_dest_Imm o dest_BL_Address o lbl_strip_comment) label;
+        *)
+
+        (*-------------------------------------------------------------------
+         * Replaces invalid identifier characters by '_', to conform to
+         * Lexis.ok_identifier.
+         *-------------------------------------------------------------------*)
+        fun escape_non_alphanum c = if Char.isAlphaNum c then String.str c else "_";
+        fun to_ident name = String.translate escape_non_alphanum name;
+
+        (* Generate a string suffix from the label. *)
+        val striped_label = lbl_strip_comment label;
+        val wps_id_suffix =
+          if (is_BL_Address striped_label)
+            then (term_to_string o snd o gen_dest_Imm o dest_BL_Address) striped_label
+            else (stringSyntax.fromHOLstring o dest_BL_Label) striped_label;
+        val wps_id_suffix = to_ident wps_id_suffix;
 
         val var_wps1 = ``wps':(bir_label_t |-> bir_exp_t)``;
         val thm = SPECL [wps, var_wps1] prog_l_thm;
 
-(* this took a while, it should not have been?! *)
-	val thm = MP thm wps_bool_sound_thm;
+        (* this took a while, it should not have been?! *)
+        val thm = MP thm wps_bool_sound_thm;
 
-(* this takes a bit, not anymore? *)
+        (* this takes a bit, not anymore? *)
         val wps_eval_restrict_consts = !bir_wp_comp_wps_iter_step2_consts;
-        val wps1_thm = computeLib.RESTR_EVAL_CONV wps_eval_restrict_consts (list_mk_comb (``bir_wp_exec_of_block:'a bir_program_t ->
-  bir_label_t ->
-  (bir_label_t -> bool) ->
-  bir_exp_t ->
-  (bir_label_t |-> bir_exp_t) -> (bir_label_t |-> bir_exp_t) option``, [program, label, ls, post, wps]));
-        val wps1_thm = SIMP_RULE pure_ss [GSYM bir_exp_subst1_def, GSYM bir_exp_and_def] wps1_thm; (* normalize *)
-	val wps1 = (snd o dest_comb o snd o dest_eq o concl) wps1_thm;
+        val wps1_thm = computeLib.RESTR_EVAL_CONV wps_eval_restrict_consts
+          (list_mk_comb
+            (``bir_wp_exec_of_block:'a bir_program_t ->
+                                    bir_label_t ->
+                                    (bir_label_t -> bool) ->
+                                    bir_exp_t ->
+                                    (bir_label_t |-> bir_exp_t) ->
+                                    (bir_label_t |-> bir_exp_t) option``,
+            [program, label, ls, post, wps]));
+
+        (* normalize *)
+        val wps1_thm = SIMP_RULE pure_ss [GSYM bir_exp_subst1_def, GSYM bir_exp_and_def] wps1_thm;
+	      val wps1 = (snd o dest_comb o snd o dest_eq o concl) wps1_thm;
+
         val new_wp_id = "bir_wp_comp_wps_iter_step2_wp_" ^ wps_id_suffix;
+        val _ = print ("new_wp_id: " ^ new_wp_id ^ "\n");
         val new_wp_id_var = mk_var (new_wp_id, ``:bir_exp_t``);
         val new_wp_def = Define `^new_wp_id_var = ^(extract_new_wp wps1)`;
-	(*
-	val current_theory_s = current_theory();
+	      (*
+	      val current_theory_s = current_theory();
         val new_wp_id_const = mk_const (new_wp_id, ``:bir_exp_t``);
         *)
         val new_wp_id_const = (fst o dest_eq o concl) new_wp_def;
@@ -173,12 +195,10 @@ fun bir_wp_comp_wps_iter_step2 (wps, wps_bool_sound_thm) prog_l_thm ((program, p
         val wps1 = (snd o dest_comb o snd o dest_eq o concl) wps1_thm;
 
         val thm = SPEC wps1 (GEN var_wps1 thm);
-	val wps1_bool_sound_thm = MP thm wps1_thm;
+	      val wps1_bool_sound_thm = MP thm wps1_thm;
     in
-	(wps1, wps1_bool_sound_thm)
+	      (wps1, wps1_bool_sound_thm)
     end;
-
-
 
 
 (*
