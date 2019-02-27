@@ -74,7 +74,10 @@ val aes_program_def = Define `
 
 
 val aes_post_def = Define `
-      aes_post = (BExp_BinPred BIExp_Equal (BExp_Den (BVar "SP_EL0" (BType_Imm Bit64))) (BExp_Const (Imm64 112w)))
+  aes_post =
+    (BExp_BinPred BIExp_Equal
+      (BExp_Den (BVar "SP_EL0" (BType_Imm Bit64)))
+      (BExp_Const (Imm64 112w)))
 `;
 
 val aes_ls_def = Define `
@@ -112,7 +115,11 @@ val reusable_thm = bir_wp_exec_of_block_reusable_thm;
 val prog_thm = bir_wp_comp_wps_iter_step0_init reusable_thm (program, post, ls) defs;
 
 
-val (wps1, wps1_bool_sound_thm) = bir_wp_comp_wps prog_thm ((wps, wps_bool_sound_thm), (wpsdom, List.rev blstodo)) (program, post, ls) defs;
+val (wps1, wps1_bool_sound_thm) =
+   bir_wp_comp_wps prog_thm
+      ((wps, wps_bool_sound_thm), (wpsdom, List.rev blstodo))
+      (program, post, ls)
+      defs;
 
 
 
@@ -127,6 +134,12 @@ val wps1_bool_sound_thm_readable = REWRITE_RULE [GSYM aes_wps1_def] wps1_bool_so
 val _ = save_thm("aes_wps1_bool_sound_thm", wps1_bool_sound_thm_readable);
 
 
+print "aes_wps1_def:\n";
+print_thm aes_wps1_def;
+print "\n\n";
 
+print "wps1_bool_sound_thm_readable:\n";
+print_thm wps1_bool_sound_thm_readable;
+print "\n\n";
 
 
