@@ -27,6 +27,8 @@ load "pairLib";
 structure bir_wpLib =
 struct
 
+  val ERR = mk_HOL_ERR "bir_wpLib";
+
 (* establish wps_bool_sound_thm for an initial analysis context (program, post, ls, wps) *)
 fun bir_wp_init_wps_bool_sound_thm (program, post, ls) wps defs =
       let
@@ -37,7 +39,7 @@ fun bir_wp_init_wps_bool_sound_thm (program, post, ls) wps defs =
           REWRITE_TAC ([bir_bool_wps_map_def]@defs) >>
           REPEAT_MAX 20 (
               REWRITE_TAC [finite_mapTheory.FEVERY_FUPDATE, finite_mapTheory.DRESTRICT_FEMPTY, finite_mapTheory.FEVERY_FEMPTY] >>
-              SIMP_TAC (srw_ss()) [bir_is_bool_exp_def,type_of_bir_exp_def, bir_var_type_def, type_of_bir_imm_def, 
+              SIMP_TAC (srw_ss()) [bir_is_bool_exp_def,type_of_bir_exp_def, bir_var_type_def, type_of_bir_imm_def,
         		           bir_type_is_Imm_def, BType_Bool_def]
             )
           );
@@ -63,7 +65,7 @@ fun bir_wp_comp_wps_iter_step0_init reusable_thm (program, post, ls) defs =
         val thm = SPECL [program, var_l, ls, post, var_wps, var_wps1] reusable_thm;
 
         val post_bool_conv = [
-		       bir_is_bool_exp_def,type_of_bir_exp_def, bir_var_type_def, type_of_bir_imm_def, 
+		       bir_is_bool_exp_def,type_of_bir_exp_def, bir_var_type_def, type_of_bir_imm_def,
 		       bir_type_is_Imm_def, BType_Bool_def];
         val prog_typed_conv = [
 			    bir_is_well_typed_program_def,bir_is_well_typed_block_def,bir_is_well_typed_stmtE_def,
@@ -181,7 +183,6 @@ fun bir_wp_comp_wps_iter_step2 (wps, wps_bool_sound_thm) prog_l_thm ((program, p
 	      val wps1 = (snd o dest_comb o snd o dest_eq o concl) wps1_thm;
 
         val new_wp_id = "bir_wp_comp_wps_iter_step2_wp_" ^ wps_id_suffix;
-        val _ = print ("new_wp_id: " ^ new_wp_id ^ "\n");
         val new_wp_id_var = mk_var (new_wp_id, ``:bir_exp_t``);
         val new_wp_def = Define `^new_wp_id_var = ^(extract_new_wp wps1)`;
 	      (*
@@ -243,93 +244,88 @@ fun bir_wp_init_rec_proc_jobs prog_term wps_term =
 
 (* recursive procedure for traversing the control flow graph *)
 fun bir_wp_comp_wps prog_thm ((wps, wps_bool_sound_thm), (wpsdom, blstodo)) (program, post, ls) defs =
-    let
-	val block = List.find (fn block =>
-	      let
-                  val (label, _, end_statement) = dest_bir_block block;
-		  (*val label = (snd o dest_eq o concl o EVAL) label;*)
-                  fun is_lbl_in_wps lbl = List.exists (fn el => cmp_label el lbl) wpsdom;
-	      in
-                  (*(not (is_lbl_in_wps wps label))
-                  andalso*)
-		  (not (is_BStmt_Halt end_statement))
-                  andalso
-                  (
-                    ((is_BStmt_Jmp end_statement) andalso (
-		      (is_lbl_in_wps o dest_BLE_Label o dest_BStmt_Jmp) end_statement
-                    ))
-                  orelse
-		    ((is_BStmt_CJmp end_statement) andalso (
-		      (((is_lbl_in_wps o dest_BLE_Label o #2 o dest_BStmt_CJmp) end_statement) andalso ((is_lbl_in_wps o dest_BLE_Label o #3 o dest_BStmt_CJmp) end_statement))
-                    ))
-                  )
-	      end)
-            blstodo
-    in
-      case block of 
-          SOME (bl) => 
+  let
+	  val block =
+      List.find
+        (fn block =>
+	        let
+            val (label, _, end_statement) = dest_bir_block block;
+            fun is_lbl_in_wps lbl = List.exists (fn el => cmp_label el lbl) wpsdom;
+          in
+            if (is_BStmt_Halt end_statement)
+              then false else
+            if (is_BStmt_Jmp end_statement)
+              then
+                ((is_lbl_in_wps o dest_BLE_Label o dest_BStmt_Jmp) end_statement)
+            else
+            if (is_BStmt_CJmp end_statement)
+              then
+                ((is_lbl_in_wps o dest_BLE_Label o #2 o dest_BStmt_CJmp) end_statement)
+                andalso
+                ((is_lbl_in_wps o dest_BLE_Label o #3 o dest_BStmt_CJmp) end_statement)
+            else
+              raise ERR "bir_wp_comp_wps" "unhandled end_statement type."
+          end)
+        blstodo
+  in
+    case block of
+      SOME (bl) =>
+        let
+          val (label, _, _) = dest_bir_block bl;
+          val wpsdom' = label::wpsdom;
+
+          val _ = if (!debug_trace > 1)
+            then print ("\n\r\nstarting with block: " ^ (term_to_string label) ^ "\r\n")
+            else ();
+
+          val time_start = Time.now ();
+
+          val prog_l_thm =
+            bir_wp_comp_wps_iter_step1 label prog_thm (program, post, ls) defs;
+          val (wps', wps'_bool_sound_thm) =
+            bir_wp_comp_wps_iter_step2
+              (wps, wps_bool_sound_thm)
+              prog_l_thm
+              ((program, post, ls), (label))
+              defs;
+
+          (* Remove label from blstodo *)
+          val blstodo' =
+            List.filter
+              (fn block =>
                 let
-                  val (label, _, _) = dest_bir_block bl;
-
-                  val _ = if (!debug_trace > 1) then
-                            print ("\n\r\nstarting with block: " ^ (term_to_string label) ^ "\r\n")
-                          else
-                            ()
-                          ;
-
-                  val time_start = Time.now ();
-
-                  val prog_l_thm = bir_wp_comp_wps_iter_step1 label prog_thm (program, post, ls) defs;
-                  val (wps1, wps1_bool_sound_thm) = bir_wp_comp_wps_iter_step2 (wps, wps_bool_sound_thm) prog_l_thm ((program, post, ls), (label)) defs;
-                  val blstodo1 = List.filter (fn block =>
-                        let
-                          val (label_el, _, _) = dest_bir_block block;
-                        in
-                          not (cmp_label label label_el)
-                        end) blstodo;
-                  val wpsdom1 = label::wpsdom;
-
-                  val _ = if (!debug_trace > 2) then
-                            let
-                              val wp_exp_term = (snd o dest_comb o concl o EVAL) ``(FAPPLY ^wps1 ^label)``;
-                              val _ = bir_exp_pretty_print wp_exp_term;
-                            in
-                              ()
-                            end
-                          else
-                            ()
-                          ;
-
-                  val _ = if (!debug_trace > 1) then
-                            print ("it took " ^ (LargeInt.toString (Time.toSeconds ((Time.now ()) - time_start))) ^ "s\r\n")
-                          else
-                            ()
-                          ;
-
-                  val _ = if (!debug_trace > 0) then
-                            print ("remaining = " ^ (Int.toString (List.length blstodo1)) ^ "  \r")
-                          else
-                            ()
-                          ;
+                  val (label_el, _, _) = dest_bir_block block;
                 in
-                  (* recursive call with new wps tuple *)
-                  (*(wps1, wps1_bool_sound_thm)*)
-                  bir_wp_comp_wps prog_thm ((wps1, wps1_bool_sound_thm), (wpsdom1, blstodo1)) (program, post, ls) defs
-                end
-        | _ => let
-                 val _ = if (!debug_trace > 0) then
-                           print ("\n")
-                         else
-                           ()
-                         ;
-               in
-                 (wps, wps_bool_sound_thm)
-               end
-    end;
+                  not (cmp_label label label_el)
+                end) blstodo;
 
+          val _ = if (!debug_trace > 2) orelse true
+            then let
+                val _ = print "label: ";
+                val _ = print_term label;
+                val _ = print "\n";
+                val wp_exp_term = (snd o dest_comb o concl o EVAL) ``(FAPPLY ^wps' ^label)``;
+                val _ = bir_exp_pretty_print wp_exp_term;
+              in () end else ();
 
+          val _ = if (!debug_trace > 1)
+            then let
+              val time_as_sec = (Time.toSeconds ((Time.now ()) - time_start));
+              val time_str = LargeInt.toString time_as_sec;
+              val _ = print ("it took " ^ time_str ^ "s\r\n");
+            in () end else ();
 
+          val _ = if (!debug_trace > 0)
+            then print ("remaining labels = " ^ (Int.toString (List.length blstodo')) ^ "  \r")
+            else ();
+        in
+          (* recursive call with new wps tuple (which is (wps', wps'_bool_sound_thm)) *)
+          bir_wp_comp_wps prog_thm ((wps', wps'_bool_sound_thm), (wpsdom', blstodo')) (program, post, ls) defs
+        end
+      | NONE =>
+        let
+          val _ = if (!debug_trace > 0) then print "\n" else ();
+        in (wps, wps_bool_sound_thm) end
+  end;
 
-
-
-end
+end (* bir_wpLib *)
