@@ -2,6 +2,8 @@
 structure bir_cfgLib =
 struct
 
+val ERR = mk_HOL_ERR "bir_cfgLib";
+
 (*
 =================================================================
               translate to edge by node list

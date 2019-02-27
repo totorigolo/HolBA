@@ -9,6 +9,7 @@ open bir_expLib;
 structure bir_lifter_simple_interfaceLib =
 struct
 
+val ERR = mk_HOL_ERR "bir_lifter_simple_interfaceLib";
 
 
 val log = ref TextIO.stdOut;
