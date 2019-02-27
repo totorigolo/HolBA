@@ -26,6 +26,8 @@ load "pairLib";
 structure bir_wp_simpLib =
 struct
 
+  val ERR = mk_HOL_ERR "bir_wp_simpLib";
+
 
   fun syntax_fns n d m = HolKernel.syntax_fns {n = n, dest = d, make = m} "bir_exp_substitutions"
   val syntax_fns3 = syntax_fns 3 HolKernel.dest_triop HolKernel.mk_triop;

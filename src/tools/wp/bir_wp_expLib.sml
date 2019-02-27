@@ -13,6 +13,8 @@ open bir_wp_simpLib;
 structure bir_wp_expLib =
 struct
 
+val ERR = mk_HOL_ERR "bir_wp_expLib";
+
 
 fun get_nth_last_label prog_term n =
       let

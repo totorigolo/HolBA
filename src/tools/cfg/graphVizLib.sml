@@ -2,6 +2,7 @@
 structure graphVizLib =
 struct
 
+val ERR = mk_HOL_ERR "graphVizLib";
 
 (*
  ----------------------------------------
