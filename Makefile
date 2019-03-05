@@ -7,7 +7,8 @@ SRCDIR     = $(CURDIR)/src
 
 EXAMPLES   = $(SRCDIR)/tools/lifter/examples \
              $(SRCDIR)/tools/cfg/examples \
-             $(SRCDIR)/tools/wp/examples
+             $(SRCDIR)/tools/wp/examples \
+             $(SRCDIR)/tools/exec/examples
 
 BENCHMARKS = $(SRCDIR)/tools/lifter/benchmark \
              $(SRCDIR)/tools/wp/benchmark
