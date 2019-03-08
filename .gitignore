@@ -16,3 +16,5 @@ tempdir
 
 # IDEs
 .vscode
+*.swp
+

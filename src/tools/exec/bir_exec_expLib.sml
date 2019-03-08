@@ -108,10 +108,14 @@ bir_update_mmap_def
     let
       val is_tm_fun = is_bir_eval_exp;
       val check_tm_fun = (fn t => is_BVal_Imm t orelse is_BVal_Mem t);
-      val conv = ((REWRITE_CONV [bir_eval_exp_def]) THENC (bir_exec_env_read_conv var_eq_thms) THENC
-                  (computeLib.RESTR_EVAL_CONV [``bir_store_in_mem``]) THENC
-                  (REWRITE_CONV [bir_exp_memTheory.bir_store_in_mem_REWRS]) THENC EVAL);
-(*      (SIMP_CONV (list_ss++HolBACoreSimps.holBACore_ss) []); *)
+      val conv = (
+              (REWRITE_CONV [bir_eval_exp_def])
+        THENC (bir_exec_env_read_conv var_eq_thms)
+        THENC (computeLib.RESTR_EVAL_CONV [``bir_store_in_mem``])
+        THENC (REWRITE_CONV [bir_exp_memTheory.bir_store_in_mem_REWRS])
+        THENC EVAL
+        (*THENC (SIMP_CONV (list_ss++HolBACoreSimps.holBACore_ss) [])*)
+      );
     in
       GEN_selective_conv is_tm_fun check_tm_fun conv
     end;
