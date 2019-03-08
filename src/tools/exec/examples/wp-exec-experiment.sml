@@ -16,16 +16,16 @@ val prog1 = ``
           (BExp_BinPred BIExp_Equal
             (BExp_Load
               (BExp_Store
-                (BExp_Den (BVar "MEM" (BType_Mem Bit64 Bit8)))
+                (BExp_Den (BVar "MEM" (BType_Mem Bit16 Bit8)))
                 (BExp_BinExp BIExp_Plus
-                  (BExp_Den (BVar "BASE_ADDR" (BType_Imm Bit64)))
-                  (BExp_Const (Imm64 96w)))
+                  (BExp_Den (BVar "BASE_ADDR" (BType_Imm Bit16)))
+                  (BExp_Const (Imm16 96w)))
                 BEnd_BigEndian
-                (BExp_Const (Imm64 42w)))
-              (BExp_Den (BVar "ADDR" (BType_Imm Bit64)))
+                (BExp_Const (Imm16 42w)))
+              (BExp_Den (BVar "ADDR" (BType_Imm Bit16)))
               BEnd_BigEndian
-              Bit64)
-            (BExp_Const (Imm64 42w)))
+              Bit16)
+            (BExp_Const (Imm16 42w)))
              ];
      bb_last_statement := BStmt_Halt (BExp_Const (Imm32 0w))
     |>
@@ -36,10 +36,10 @@ val state1 = ``<|
   bst_environ :=
     BEnv (FEMPTY
       |+ ("WP", (BType_Imm Bit1, NONE))
-      |+ ("x", (BType_Imm Bit64, SOME (BVal_Imm (Imm64 (x: word64)))))
-      |+ ("MEM", (BType_Mem Bit64 Bit8, SOME (BVal_Mem Bit64 Bit8 (mem2: num -> num))))
-      |+ ("BASE_ADDR", (BType_Imm Bit64, SOME (BVal_Imm (Imm64 (base_addr: word64)))))
-      |+ ("ADDR", (BType_Imm Bit64, SOME (BVal_Imm (Imm64 (addr: word64)))))
+      |+ ("x", (BType_Imm Bit16, SOME (BVal_Imm (Imm16 (x: word16)))))
+      |+ ("MEM", (BType_Mem Bit16 Bit8, SOME (BVal_Mem Bit16 Bit8 (mem2: num -> num))))
+      |+ ("BASE_ADDR", (BType_Imm Bit16, SOME (BVal_Imm (Imm16 (base_addr: word16)))))
+      |+ ("ADDR", (BType_Imm Bit16, SOME (BVal_Imm (Imm16 (addr: word16)))))
     );
   bst_status := BST_Running
 |>``;
@@ -59,16 +59,62 @@ val _ = print "ok\n";
 (* Verbose EVAL *)
 computeLib.monitoring := SOME (fn (tm: term) =>
   let
-    val bir = String.isSubstring "bir" (term_to_string tm);
-    val _ = if bir then
-        (print "=> ``"; print_term tm; print "``: "; ())
-      else ();
+    val sleep_time = Time.fromMilliseconds (Int.toLarge 10);
+    (*val _ = OS.Process.sleep sleep_time;*)
+    val yep = ((String.isSubstring "bir" (term_to_string tm))
+        orelse (String.isSubstring "Bir" (term_to_string tm))
+        orelse (String.isSubstring "b2" (term_to_string tm))
+        orelse (String.isSubstring "w2" (term_to_string tm))
+      );
+    val nop = ((String.isSubstring "BIT" (term_to_string tm))
+        orelse (String.isSubstring "NUMERAL" (term_to_string tm))
+        orelse (String.isSubstring "numeral" (term_to_string tm))
+        orelse (String.isSubstring "ORD" (term_to_string tm))
+        orelse (String.isSubstring "ODD" (term_to_string tm))
+        orelse (String.isSubstring "COND" (term_to_string tm))
+        orelse (String.isSubstring "FDUB" (term_to_string tm))
+        orelse (String.isSubstring "FUNPOW" (term_to_string tm))
+        orelse (String.isSubstring "GENLIST" (term_to_string tm))
+        (*orelse (String.isSubstring "DIV_2EXP" (term_to_string tm))*)
+        orelse (String.isSubstring "SUC" (term_to_string tm))
+        orelse (String.isSubstring "$<" (term_to_string tm))
+        orelse (String.isSubstring "$=" (term_to_string tm))
+        orelse (String.isSubstring "$~" (term_to_string tm))
+        orelse (String.isSubstring "$-" (term_to_string tm))
+        orelse (String.isSubstring "$/\\" (term_to_string tm)) (*"*)
+        orelse (String.isSubstring "$\\/" (term_to_string tm))
+      );
+    (*val log = yep;*)
+    val log = not nop;
+    val _ = if log then (
+      print "==========================================================\n";
+      print "==========================================================\n";
+      print "=> ``";
+      print_term tm;
+      print "``: ";
+      ()
+    ) else ();
+    val _ = if log then print "=> " else ();
   in
-    bir
+    log
   end);
+computeLib.monitoring := SOME (fn (tm: term) =>
+  let
+    val _ = print_term tm;
+    val _ = print "\n";
+    val tm_str = term_to_string tm;
+  in
+           (tm_str = "$'")
+    orelse (tm_str = "LET")
+    orelse (tm_str = "UNCURRY")
+    orelse (tm_str = "n2l")
+  end);
+computeLib.monitoring := NONE;
+
+computeLib.set_skip (computeLib.the_compset) ``COND`` (SOME 1);
+
 
 val _ = bir_exec_prog_print name prog n_max validprog_o welltypedprog_o state_o;
-
 
 
 

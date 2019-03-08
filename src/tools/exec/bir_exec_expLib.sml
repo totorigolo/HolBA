@@ -111,10 +111,18 @@ bir_update_mmap_def
       val conv = (
               (REWRITE_CONV [bir_eval_exp_def])
         THENC (bir_exec_env_read_conv var_eq_thms)
-        THENC (computeLib.RESTR_EVAL_CONV [``bir_store_in_mem``])
+        THENC (computeLib.RESTR_EVAL_CONV [
+          ``bir_store_in_mem``
+          (*, ``w2n``*)
+        ])
         THENC (REWRITE_CONV [bir_exp_memTheory.bir_store_in_mem_REWRS])
         THENC EVAL
-        (*THENC (SIMP_CONV (list_ss++HolBACoreSimps.holBACore_ss) [])*)
+        THENC (REWRITE_CONV [
+          bitTheory.MOD_2EXP_def,
+          bitTheory.DIV_2EXP_def,
+          bitstringTheory.boolify_def
+        ])
+        THENC (SIMP_CONV (list_ss++HolBACoreSimps.holBACore_ss) [])
       );
     in
       GEN_selective_conv is_tm_fun check_tm_fun conv
