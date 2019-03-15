@@ -204,10 +204,11 @@ struct
   fun preproc_vars acc [] = acc
     | preproc_vars acc (lbl_str::lbl_list) =
         let
-          val _ = print ((Int.toString (length acc)) ^ "        \r");
-          val def_thm = lookup_def ("bir_wp_comp_wps_iter_step2_wp_" ^ lbl_str);
+          val _ = if (!bir_wpLib.wp_trace > 1)
+            then (print ((Int.toString (length acc)) ^ "        \r")) else ();
+          val def_thm = lookup_def (bir_wpLib.wp_def_prefix ^ lbl_str);
 (*
-          val vars_def_var_id = "bir_wp_comp_wps_iter_step2_wp_" ^ lbl_str ^ "_vars";
+          val vars_def_var_id = bir_wpLib.wp_def_prefix ^ lbl_str ^ "_vars";
           val vars_def_var = mk_var (vars_def_var_id, ``:bir_var_t -> bool``);
           val vars_def_thm = Define `^vars_def_var = bir_vars_of_exp ^((fst o dest_eq o concl) def_thm)`;
 *)
@@ -371,7 +372,7 @@ for debugging:
       val _ = prem_id_ctr := (!prem_id_ctr) + 1;
       val prem_id = prem_id_prefix ^ (Int.toString prem_id_idx);
       val prem_id_var = mk_var (prem_id, ``:bir_exp_t``);
-      val prem_def = Define `^prem_id_var = bir_exp_and ^prem ^e1`;
+      val prem_def = zDefine `^prem_id_var = bir_exp_and ^prem ^e1`;
       val prem_id_const = mk_const (prem_id, ``:bir_exp_t``);
 
       val vars_thm = preproc_vars_thm false varexps_thms prem_def;
@@ -429,16 +430,17 @@ for debugging:
 
       val (term_vs, term_e) = dest_bir_exp_varsubst term;
       val const_n = (fst o dest_const) term_e;
-      val _ = print ("\r\n" ^ const_n ^ "\r\n");
+      val _ = if (!bir_wpLib.wp_trace > 0)
+        then print ("\r\n" ^ const_n ^ "\r\n") else ();
 
-(* bir_wp_comp_wps_iter_step2_wp_0x4008C0w *)
-      val _ = if (false andalso (const_n = "bir_wp_comp_wps_iter_step2_wp_0x400970w")) then (
+(* bir_wp_comp_wps_iter_step2_wp__0x4008C0w *)
+      val _ = if (false andalso (const_n = "bir_wp_comp_wps_iter_step2_wp__0x400970w")) then (
                 print "\r\n-------------------------- debug printout -------------------------\r\n";
                 print_term goalterm;
                 print "\r\n-------------------------------------------------------------------\r\n"
               ) else ();
 
-      val _ = if (false andalso (const_n = "bir_wp_comp_wps_iter_step2_wp_0x400970w")) then (
+      val _ = if (false andalso (const_n = "bir_wp_comp_wps_iter_step2_wp__0x400970w")) then (
                 print "\r\n-------------------------- debug printout -------------------------\r\n";
                 print_term goalterm;
                 print "\r\n-------------------------------------------------------------------\r\n";
@@ -992,7 +994,7 @@ val i = if take_all then
 
 val lbl_str = List.nth (lbl_list, (List.length lbl_list) - 2 - i + 1);
 
-val def_thm = lookup_def ("bir_wp_comp_wps_iter_step2_wp_" ^ lbl_str);
+val def_thm = lookup_def (bir_wpLib.wp_def_prefix ^ lbl_str);
 val def_const = (fst o dest_eq o concl) def_thm;
 
 
@@ -1102,7 +1104,7 @@ bir_exp_is_taut
         (bir_exp_varsubst1 (BVar "R0" (BType_Imm Bit64))
            (BVar "R0_wp_3" (BType_Imm Bit64))
            (bir_exp_varsubst FEMPTY
-              bir_wp_comp_wps_iter_step2_wp_0x4005E0w))))
+              bir_wp_comp_wps_iter_step2_wp__0x4005E0w))))
 ``;
 
 *)
@@ -1135,7 +1137,7 @@ bir_exp_is_taut
                     (BExp_BinExp BIExp_LeftShift
                        (BExp_Den (BVar "R3" (BType_Imm Bit32)))
                        (BExp_Const (Imm32 2w)))
-                    bir_wp_comp_wps_iter_step2_wp_33488w))))))
+                    bir_wp_comp_wps_iter_step2_wp__33488w))))))
 ``;
 
 val extra_wt_varset = SOME ``

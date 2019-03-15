@@ -91,8 +91,8 @@ val (bir_is_lifted_inst_block_tm,  mk_bir_is_lifted_inst_block, dest_bir_is_lift
 
 exception bir_inst_liftingAuxExn of bir_inst_liftingExn_data;
 
-val debug_trace = ref (1:int)
-val _ = register_trace ("bir_inst_lifting.DEBUG_LEVEL", debug_trace, 2)
+val lifter_trace = ref (1:int)
+val _ = register_trace ("bir_inst_lifting.DEBUG_LEVEL", lifter_trace, 2)
 
 val sty_OK    = [FG Green];
 val sty_CACHE = [FG Yellow];
@@ -1446,7 +1446,7 @@ functor bir_inst_liftingFunctor (MD : sig val mr : bmr_rec end) : bir_inst_lifti
 *)
   in
 
-  fun timer_start level = if ((!debug_trace) > level) then SOME (Time.now()) else NONE;
+  fun timer_start level = if ((!lifter_trace) > level) then SOME (Time.now()) else NONE;
   fun timer_stop NONE = ""
     | timer_stop (SOME tm) = let
        val d_time = Time.- (Time.now(), tm);
@@ -1516,8 +1516,8 @@ functor bir_inst_liftingFunctor (MD : sig val mr : bmr_rec end) : bir_inst_lifti
          val thm1 = MP thm0 precond_thm
          val _ = if fallback then () else let
            val _ = data_no_r := (!data_no_r) + 1
-           val _ = if (!debug_trace > 1) then (
-              print_current_instr_string (!inst_no_r) (!data_no_r) false pc hex_code; print "\n") else (if (!debug_trace = 1) then print "." else ());
+           val _ = if (!lifter_trace > 1) then (
+              print_current_instr_string (!inst_no_r) (!data_no_r) false pc hex_code; print "\n") else (if (!lifter_trace = 1) then print "." else ());
          in () end;
       in thm1 end handle HOL_ERR _ =>
          raise (ERR "lift_data" ("lifting of hex-code '" ^ hex_code ^ "' failed, is the PC outside the protected memory region?"))
@@ -1530,8 +1530,8 @@ functor bir_inst_liftingFunctor (MD : sig val mr : bmr_rec end) : bir_inst_lifti
            | _ => hex_code);
 
         val _ = inst_no_r := (!inst_no_r) + 1
-        val _ = if (!debug_trace > 1) then (
-           print_current_instr_string (!inst_no_r) (!data_no_r) true pc human_hex_code) else (if (!debug_trace = 1) then print "." else ());
+        val _ = if (!lifter_trace > 1) then (
+           print_current_instr_string (!inst_no_r) (!data_no_r) true pc human_hex_code) else (if (!lifter_trace = 1) then print "." else ());
         val timer = timer_start 1;
         val (res, ed) = (SOME (bir_lift_instr_mu (mu_b, mu_e) (mu_thm, mm_precond_thm) (!cache_r) pc hex_code human_hex_code), NONE) handle
                        bir_inst_liftingExn (_, d)  => (NONE, SOME d)
@@ -1539,19 +1539,19 @@ functor bir_inst_liftingFunctor (MD : sig val mr : bmr_rec end) : bir_inst_lifti
 
         val d_s = timer_stop timer;
 
-        val _ = if (!debug_trace > 1) then (print (" - " ^ d_s ^ " s - ")) else ();
+        val _ = if (!lifter_trace > 1) then (print (" - " ^ d_s ^ " s - ")) else ();
         val res' = case res of
              SOME (thm, cache', _) => (cache_r := cache'; MATCH_MP prog_dist_INST_THM thm)
            | NONE => lift_data true (pc, hex_code)
 
         val _ = case res of
              SOME (thm, _, cache_used) =>
-                 if (!debug_trace > 1) then (
+                 if (!lifter_trace > 1) then (
                    (print_with_style sty_OK "OK");
                    (if cache_used then (print " - "; print_with_style sty_CACHE "cached") else ());
                    (print "\n")) else ()
            | NONE => (
-                (if (!debug_trace > 1) then (
+                (if (!lifter_trace > 1) then (
                    (print_with_style sty_FAIL "FAILED\n");
                     case ed of NONE => () | SOME d =>
                     print_with_style sty_FAIL ("   " ^ (bir_inst_liftingExn_data_to_string d) ^ "\n")
@@ -1566,7 +1566,7 @@ functor bir_inst_liftingFunctor (MD : sig val mr : bmr_rec end) : bir_inst_lifti
                              | _ => lift_inst (pc, hex_code, ty)
         in (thm::thms) end
 
-      val _ = if (!debug_trace = 1) then print "bir_lift_prog " else ();
+      val _ = if (!lifter_trace = 1) then print "bir_lift_prog " else ();
       val prog_dist_EMPTY_THM' = MATCH_MP prog_dist_EMPTY_THM mu_thm
 
 (*
@@ -1599,15 +1599,15 @@ functor bir_inst_liftingFunctor (MD : sig val mr : bmr_rec end) : bir_inst_lifti
           val basic_thms = foldl lift_ext_entry [] ext_entries;
 
           val d_s = timer_stop timer;
-          val _ = if (!debug_trace > 1) then (print ("\ntime to lift individual instructions only - " ^ d_s ^ " s\n")) else ();
+          val _ = if (!lifter_trace > 1) then (print ("\ntime to lift individual instructions only - " ^ d_s ^ " s\n")) else ();
         in
           basic_thms
         end;
 
 
       val prog_thm0 = let
-        val _ = if (!debug_trace > 1) then (print ("merging code"))
-                else if (!debug_trace = 1) then (print "!") else ();
+        val _ = if (!lifter_trace > 1) then (print ("merging code"))
+                else if (!lifter_trace = 1) then (print "!") else ();
         val timer = timer_start 1;
         val prog_dist_thm = merge_prog_distinct_thms basic_thms
 
@@ -1623,16 +1623,16 @@ functor bir_inst_liftingFunctor (MD : sig val mr : bmr_rec end) : bir_inst_lifti
         val thm1 = MP (MP (SPECL [rhs (concl p_thm), rhs (concl mms_thm)] thm0) p_thm) mms_thm
 
         val d_s = timer_stop timer;
-        val _ = if (!debug_trace > 1) then (print (" - " ^ d_s ^ " s\n")) else ();
+        val _ = if (!lifter_trace > 1) then (print (" - " ^ d_s ^ " s\n")) else ();
       in thm1 end;
 
 
-      val _ = if ((!debug_trace > 1) andalso (not (List.null (!failing_inst_r)))) then
+      val _ = if ((!lifter_trace > 1) andalso (not (List.null (!failing_inst_r)))) then
                 (print "\n"; print_bir_inst_errors (!failing_inst_r)) else ();
 
       val prog_thm1 = let
-        val _ = if (!debug_trace > 1) then (print ("checking for duplicate labels"))
-                else if (!debug_trace = 1) then (print "!") else ();
+        val _ = if (!lifter_trace > 1) then (print ("checking for duplicate labels"))
+                else if (!lifter_trace = 1) then (print "!") else ();
         val timer = timer_start 1;
 
         val (pre, _) = dest_imp_only (concl prog_thm0)
@@ -1640,13 +1640,13 @@ functor bir_inst_liftingFunctor (MD : sig val mr : bmr_rec end) : bir_inst_lifti
         val thm2 = MP prog_thm0 pre_thm
 
         val d_s = timer_stop timer;
-        val _ = if (!debug_trace > 1) then (print (" - " ^ d_s ^ " s\n")) else ();
+        val _ = if (!lifter_trace > 1) then (print (" - " ^ d_s ^ " s\n")) else ();
       in thm2 end;
 
 
       val prog_thm2 = let
-        val _ = if (!debug_trace > 1) then (print ("merging memory-regions"))
-                else if (!debug_trace = 1) then (print "!") else ();
+        val _ = if (!lifter_trace > 1) then (print ("merging memory-regions"))
+                else if (!lifter_trace = 1) then (print "!") else ();
         val timer = timer_start 1;
 
         val (_, mu_tm, mms_tm, p_tm) = dest_bir_is_lifted_prog (concl prog_thm1)
@@ -1658,14 +1658,14 @@ functor bir_inst_liftingFunctor (MD : sig val mr : bmr_rec end) : bir_inst_lifti
         val thm2 = MP (SPEC mms'_tm thm1) pre_thm
 
         val d_s = timer_stop timer;
-        val _ = if (!debug_trace > 1) then (print (" - " ^ d_s ^ " s\n")) else ();
+        val _ = if (!lifter_trace > 1) then (print (" - " ^ d_s ^ " s\n")) else ();
       in thm2 end;
 
 
       val d_s = timer_stop timer;
-      val _ = if (!debug_trace > 1) then
+      val _ = if (!lifter_trace > 1) then
         print ("Total time :") else ();
-      val _ = if (!debug_trace <> 0) then
+      val _ = if (!lifter_trace <> 0) then
          (print (" " ^ d_s ^ " s -");
          (if (List.null (!failing_inst_r)) then print_with_style sty_OK " OK\n" else
              print_with_style sty_FAIL " FAILED\n")) else ();

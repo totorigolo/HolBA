@@ -434,19 +434,21 @@ let
       (bir_eval_store (BVal_Mem ta tv mmap) a en (BVal_Imm i) = BVal_Unknown))``,
    SIMP_TAC std_ss [bir_eval_store_Unknown_REWRS])
 
-  val thm_prune1 = SIMP_RULE (std_ss ++ bir_imm_ss ++ DatatypeSimps.expand_type_quants_ss [``:bir_immtype_t``, ``:bir_imm_t``]) [bir_number_of_mem_splits_REWRS, type_of_bir_imm_def, FORALL_AND_THM] thm_prune0
+  val thm_prune1 = SIMP_RULE (std_ss ++ bir_imm_ss ++ DatatypeSimps.expand_type_quants_ss [``:bir_immtype_t``, ``:bir_imm_t``])
+    [bir_number_of_mem_splits_REWRS, type_of_bir_imm_def, FORALL_AND_THM] thm_prune0
 
   val (l1, l2) = partition (is_imp_only o snd o strip_forall o concl) (CONJUNCTS thm_prune1)
 
-  val l1' = map (SIMP_RULE (list_ss++bir_imm_ss++DatatypeSimps.expand_type_quants_ss [``:bir_immtype_t``]) [bir_number_of_mem_splits_REWRS] o (Q.GEN `ta`)) l1
+  val l1' = map (SIMP_RULE (list_ss++bir_imm_ss++DatatypeSimps.expand_type_quants_ss [``:bir_immtype_t``])
+    [bir_number_of_mem_splits_REWRS] o (Q.GEN `ta`)) l1
 
   val thm_prune2 = SIMP_RULE std_ss [FORALL_AND_THM, GSYM CONJ_ASSOC] (GEN_ALL
     (LIST_CONJ (l1' @ l2)))
 
-
   val thm0 = SIMP_RULE (std_ss) [bir_eval_store_Unknown_REWRS, FORALL_AND_THM] bir_eval_store_BASIC_REWR
 
-  val thm1 = SIMP_RULE (list_ss++ bir_imm_ss ++ DatatypeSimps.expand_type_quants_ss [``:bir_immtype_t``, ``:bir_imm_t``, ``:bir_endian_t``]) [ type_of_bir_imm_def, size_of_bir_immtype_def, bir_number_of_mem_splits_REWRS, bir_store_in_mem_REWRS, thm_prune2]
+  val thm1 = SIMP_RULE (list_ss++ bir_imm_ss ++ DatatypeSimps.expand_type_quants_ss [``:bir_immtype_t``, ``:bir_imm_t``, ``:bir_endian_t``])
+    [ type_of_bir_imm_def, size_of_bir_immtype_def, bir_number_of_mem_splits_REWRS, bir_store_in_mem_REWRS, thm_prune2]
      thm0
 
   val thm2 = Ho_Rewrite.REWRITE_RULE [fold_bir_endian_THM] thm1

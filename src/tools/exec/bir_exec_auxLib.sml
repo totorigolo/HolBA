@@ -3,15 +3,12 @@ open HolKernel boolLib liteLib simpLib Parse bossLib;
 open bir_envSyntax;
 
 
-val debug_trace = ref (1:int)
-val _ = register_trace ("bir_exec.DEBUG_LEVEL", debug_trace, 2)
 
 structure bir_exec_auxLib =
 struct
 
-
-
-  fun timer_start level = if ((!debug_trace) > level) then SOME (Time.now()) else NONE;
+  fun timer_start level = if ((!bir_execLib.wp_trace) > level)
+    then SOME (Time.now()) else NONE;
   fun timer_stop NONE = ""
     | timer_stop (SOME tm) = let
        val d_time = Time.- (Time.now(), tm);
@@ -88,34 +85,29 @@ struct
     GEN_match_conv is_tm_fun (GEN_check_conv check_tm_fun conv);
 
 
-
-
-
   fun gen_var_eq_thms vars =
-        let
-          val vars_ = List.map (fst o dest_BVar) vars;
-        in
-          (List.foldl (fn (tm,thms) => (((if ((!debug_trace) > 0) then (print "!") else ());
-                                         ((SIMP_RULE pure_ss [boolTheory.EQ_CLAUSES]) o (EVAL THENC (REWRITE_CONV thms)))
-                      ) tm)::thms) []
-            (List.foldl (fn (v,l) => (List.map (fn v2 => mk_eq(v,v2)) vars_)@l) [] vars_)
-          )
-        end;
-
-
+    let
+      val vars_ = List.map (fst o dest_BVar) vars;
+    in
+      List.foldl (fn (tm,thms) => ((
+          (if ((!bir_execLib.wp_trace) > 0) then (print "!") else ());
+          ((SIMP_RULE pure_ss [boolTheory.EQ_CLAUSES]) o (EVAL THENC (REWRITE_CONV thms)))
+        ) tm)::thms) []
+        (List.foldl (fn (v,l) => (List.map (fn v2 => mk_eq(v,v2)) vars_)@l) [] vars_)
+    end;
 
   fun gen_label_eq_thms labels =
     let
-      val eq_list = (List.foldl (fn (v,ls) => (List.map (fn v2 => mk_eq(v,v2)) labels)@ls) [] labels);
+      val eq_list = (List.foldl
+        (fn (v,ls) => (List.map (fn v2 => mk_eq(v,v2)) labels)@ls) [] labels);
       val eq_list_len = length eq_list;
-
       val eval_conv = ((SIMP_RULE pure_ss [boolTheory.EQ_CLAUSES]) o EVAL);
     in
-          List.foldl (fn (t,(i,l)) => (if ((!debug_trace) > 0 andalso (i >= (eq_list_len div 100))) then (print "!";0) else (i+1),
-                                       (eval_conv t)::l)
-                     ) (0:int,[]) eq_list
+      List.foldl (fn (t,(i,l)) =>
+        if ((!bir_execLib.wp_trace) > 0 andalso (i >= (eq_list_len div 100)))
+          then (print "!";0)
+          else (i+1),
+        (eval_conv t)::l) (0:int, []) eq_list
     end;
-
-
 
 end

@@ -12,6 +12,7 @@ open bir_bool_expTheory;
 open bir_auxiliaryTheory;
 open bir_valuesTheory;
 open bir_expTheory;
+open bir_exp_memTheory;
 open bir_program_env_orderTheory;
 open bir_extra_expsTheory;
 
@@ -27,81 +28,127 @@ load "pairLib";
 structure bir_wpLib =
 struct
 
+  val wp_trace = ref (1:int)
+  val _ = Feedback.register_trace ("bir_wp.DEBUG_LEVEL", wp_trace, 3)
+
+  val wp_def_prefix = "bir_wp_comp_wps_iter_step2_wp__"
+
+  local
+
   val ERR = mk_HOL_ERR "bir_wpLib";
+  val wrap_exn = Feedback.wrap_exn "bir_wpLib";
 
-(* establish wps_bool_sound_thm for an initial analysis context (program, post, ls, wps) *)
-fun bir_wp_init_wps_bool_sound_thm (program, post, ls) wps defs =
-      let
-        fun REPEAT_MAX n tac =
-          if n > 0 then ((tac THEN (REPEAT_MAX (n - 1) tac)) ORELSE ALL_TAC)
-          else NO_TAC;
-        val wps_bool_thm = prove(`` bir_bool_wps_map ^wps ``,
-          REWRITE_TAC ([bir_bool_wps_map_def]@defs) >>
-          REPEAT_MAX 20 (
-              REWRITE_TAC [finite_mapTheory.FEVERY_FUPDATE, finite_mapTheory.DRESTRICT_FEMPTY, finite_mapTheory.FEVERY_FEMPTY] >>
-              SIMP_TAC (srw_ss()) [bir_is_bool_exp_def,type_of_bir_exp_def, bir_var_type_def, type_of_bir_imm_def,
-        		           bir_type_is_Imm_def, BType_Bool_def]
-            )
-          );
-        val wps_sound_thm = prove(``bir_sound_wps_map ^program ^ls ^post ^wps``,
-          REWRITE_TAC ([bir_sound_wps_map_def]@defs) >>
-          REPEAT_MAX 20 (
-              REWRITE_TAC [finite_mapTheory.FEVERY_FUPDATE, finite_mapTheory.DRESTRICT_FEMPTY, finite_mapTheory.FEVERY_FEMPTY] >>
-              SIMP_TAC (srw_ss()) []
-            )
-          );
-      in
-        CONJ wps_bool_thm wps_sound_thm
-      end;
+  val post_bool_conv = [
+    bir_is_bool_exp_def,
+    type_of_bir_exp_def,
+    bir_var_type_def,
+    type_of_bir_imm_def,
+    bir_type_is_Imm_def,
+    BType_Bool_def,
+    bir_number_of_mem_splits_def,
+    size_of_bir_immtype_def
+  ];
 
+  in
+
+  (* establish wps_bool_sound_thm for an initial analysis context (program, post, ls, wps) *)
+  fun bir_wp_init_wps_bool_sound_thm (program, post, ls) wps defs =
+    let
+      val wps_bool_thm = prove (``bir_bool_wps_map ^wps``,
+        REWRITE_TAC (bir_bool_wps_map_def::defs) >>
+        TRY (
+          REWRITE_TAC [
+            finite_mapTheory.FEVERY_FUPDATE,
+            finite_mapTheory.DRESTRICT_FEMPTY,
+            finite_mapTheory.FEVERY_FEMPTY
+          ] >>
+          SIMP_TAC (srw_ss()) post_bool_conv
+        ));
+      val wps_sound_thm = prove(``bir_sound_wps_map ^program ^ls ^post ^wps``,
+        REWRITE_TAC (bir_sound_wps_map_def::defs) >>
+        TRY (
+          REWRITE_TAC [
+            finite_mapTheory.FEVERY_FUPDATE,
+            finite_mapTheory.DRESTRICT_FEMPTY,
+            finite_mapTheory.FEVERY_FEMPTY
+          ] >>
+          SIMP_TAC (srw_ss()) []
+        )
+      );
+    in
+      CONJ wps_bool_thm wps_sound_thm
+    end
+      handle e => raise wrap_exn "bir_wp_init_wps_bool_sound_thm" e;
 
 
 (* initial_thm_for_prog_post_ls *)
-fun bir_wp_comp_wps_iter_step0_init reusable_thm (program, post, ls) defs =
+  fun bir_wp_comp_wps_iter_step0_init reusable_thm (program, post, ls) defs =
     let
-        val var_l = ``l:(bir_label_t)``;
-        val var_wps = ``wps:(bir_label_t |-> bir_exp_t)``;
-        val var_wps1 = ``wps':(bir_label_t |-> bir_exp_t)``;
-        val thm = SPECL [program, var_l, ls, post, var_wps, var_wps1] reusable_thm;
+      val var_l = ``l:(bir_label_t)``;
+      val var_wps = ``wps:(bir_label_t |-> bir_exp_t)``;
+      val var_wps1 = ``wps':(bir_label_t |-> bir_exp_t)``;
+      val thm = SPECL [program, var_l, ls, post, var_wps, var_wps1] reusable_thm;
 
-        val post_bool_conv = [
-		       bir_is_bool_exp_def,type_of_bir_exp_def, bir_var_type_def, type_of_bir_imm_def,
-		       bir_type_is_Imm_def, BType_Bool_def];
-        val prog_typed_conv = [
-			    bir_is_well_typed_program_def,bir_is_well_typed_block_def,bir_is_well_typed_stmtE_def,
-			    bir_is_well_typed_stmtB_def,bir_is_well_typed_label_exp_def,
-			    type_of_bir_exp_def,bir_var_type_def,bir_type_is_Imm_def,type_of_bir_imm_def,
-			    bir_extra_expsTheory.BExp_Aligned_type_of,BExp_unchanged_mem_interval_distinct_type_of,
-			    bir_exp_memTheory.bir_number_of_mem_splits_REWRS, BType_Bool_def, bir_exp_true_def, bir_exp_false_def, BExp_MSB_type_of,
-			    bir_nzcv_expTheory.BExp_nzcv_ADD_DEFS, bir_nzcv_expTheory.BExp_nzcv_SUB_DEFS, bir_immTheory.n2bs_def, bir_extra_expsTheory.BExp_word_bit_def,
-			    BExp_Align_type_of, BExp_ror_type_of, BExp_LSB_type_of, BExp_word_bit_exp_type_of,
-			    bir_nzcv_expTheory.BExp_ADD_WITH_CARRY_type_of, BExp_word_reverse_type_of,
-                            BExp_ror_exp_type_of
-			    ];
-        val prog_valid_conv = [
-			     bir_program_valid_stateTheory.bir_is_valid_program_def,
-			     bir_program_valid_stateTheory.bir_program_is_empty_def,
-			     bir_program_valid_stateTheory.bir_is_valid_labels_def,
-			     bir_labels_of_program_def,BL_Address_HC_def
-			     ];
-        val no_declare_conv = [
-			     bir_declare_free_prog_exec_def, bir_isnot_declare_stmt_def
-			     ];
+      val prog_typed_conv = [
+        bir_is_well_typed_program_def,
+        bir_is_well_typed_block_def,
+        bir_is_well_typed_stmtE_def,
+        bir_is_well_typed_stmtB_def,
+        bir_is_well_typed_label_exp_def,
+        type_of_bir_exp_def,
+        bir_var_type_def,
+        bir_type_is_Imm_def,
+        type_of_bir_imm_def,
+        bir_extra_expsTheory.BExp_Aligned_type_of,
+        BExp_unchanged_mem_interval_distinct_type_of,
+        bir_exp_memTheory.bir_number_of_mem_splits_REWRS,
+        BType_Bool_def,
+        bir_exp_true_def,
+        bir_exp_false_def,
+        BExp_MSB_type_of,
+        bir_nzcv_expTheory.BExp_nzcv_ADD_DEFS,
+        bir_nzcv_expTheory.BExp_nzcv_SUB_DEFS,
+        bir_immTheory.n2bs_def,
+        bir_extra_expsTheory.BExp_word_bit_def,
+        BExp_Align_type_of,
+        BExp_ror_type_of,
+        BExp_LSB_type_of,
+        BExp_word_bit_exp_type_of,
+        bir_nzcv_expTheory.BExp_ADD_WITH_CARRY_type_of,
+        BExp_word_reverse_type_of,
+        BExp_ror_exp_type_of
+      ];
+      val prog_valid_conv = [
+        bir_program_valid_stateTheory.bir_is_valid_program_def,
+        bir_program_valid_stateTheory.bir_program_is_empty_def,
+        bir_program_valid_stateTheory.bir_is_valid_labels_def,
+        bir_labels_of_program_def,
+        BL_Address_HC_def
+      ];
+      val no_declare_conv = [
+        bir_declare_free_prog_exec_def,
+        bir_isnot_declare_stmt_def
+      ];
 
-	val post_bool_thm = SIMP_CONV (srw_ss()) (post_bool_conv@defs) ``bir_is_bool_exp ^post``;
-	val thm = MP thm (SIMP_RULE std_ss [] post_bool_thm);
-	val prog_typed_thm = SIMP_CONV (srw_ss()) (prog_typed_conv@defs) ``bir_is_well_typed_program ^program``;
-	val thm = MP thm (SIMP_RULE std_ss [] prog_typed_thm);
-        (*val prog_valid_thm = SIMP_CONV (srw_ss()) (prog_valid_conv@defs) ``bir_is_valid_program ^program``;*)
-	val prog_valid_thm = EVAL ``bir_is_valid_program ^program``;
-	val thm = MP thm (SIMP_RULE std_ss [] prog_valid_thm);
-	val no_declare_thm = SIMP_CONV (srw_ss()) (no_declare_conv@defs) ``bir_declare_free_prog_exec ^program``;
-	val thm = MP thm (SIMP_RULE std_ss [] no_declare_thm);
+      val post_bool_thm =
+        SIMP_CONV (srw_ss()) (post_bool_conv@defs) ``bir_is_bool_exp ^post``;
+      val thm = MP thm (SIMP_RULE std_ss [] post_bool_thm);
+      val prog_typed_thm =
+        SIMP_CONV (srw_ss()) (prog_typed_conv@defs) ``bir_is_well_typed_program ^program``;
+      val thm = MP thm (SIMP_RULE std_ss [] prog_typed_thm);
+      (*val prog_valid_thm =
+        SIMP_CONV (srw_ss()) (prog_valid_conv@defs) ``bir_is_valid_program ^program``;*)
+      val prog_valid_thm = EVAL ``bir_is_valid_program ^program``;
+      val thm = MP thm (SIMP_RULE std_ss [] prog_valid_thm);
+      val no_declare_thm =
+        SIMP_CONV (srw_ss()) (no_declare_conv@defs) ``bir_declare_free_prog_exec ^program``;
+      val thm = MP thm (SIMP_RULE std_ss [] no_declare_thm);
 
-	val thm = GENL [var_l, var_wps, var_wps1] thm;
+      val thm = GENL [var_l, var_wps, var_wps1] thm;
     in
-	thm
-    end;
+      thm
+    end
+      handle e => raise wrap_exn "bir_wp_comp_wps_iter_step0_init" e;
 
 (* include current label in reasoning *)
 fun bir_wp_comp_wps_iter_step1 label prog_thm (program, post, ls) defs =
@@ -182,7 +229,7 @@ fun bir_wp_comp_wps_iter_step2 (wps, wps_bool_sound_thm) prog_l_thm ((program, p
         val wps1_thm = SIMP_RULE pure_ss [GSYM bir_exp_subst1_def, GSYM bir_exp_and_def] wps1_thm;
 	      val wps1 = (snd o dest_comb o snd o dest_eq o concl) wps1_thm;
 
-        val new_wp_id = "bir_wp_comp_wps_iter_step2_wp_" ^ wps_id_suffix;
+        val new_wp_id = wp_def_prefix ^ wps_id_suffix;
         val new_wp_id_var = mk_var (new_wp_id, ``:bir_exp_t``);
         val new_wp_def = Define `^new_wp_id_var = ^(extract_new_wp wps1)`;
 	      (*
@@ -274,7 +321,7 @@ fun bir_wp_comp_wps prog_thm ((wps, wps_bool_sound_thm), (wpsdom, blstodo)) (pro
           val (label, _, _) = dest_bir_block bl;
           val wpsdom' = label::wpsdom;
 
-          val _ = if (!debug_trace > 1)
+          val _ = if (!wp_trace > 1)
             then print ("\n\r\nstarting with block: " ^ (term_to_string label) ^ "\r\n")
             else ();
 
@@ -299,7 +346,7 @@ fun bir_wp_comp_wps prog_thm ((wps, wps_bool_sound_thm), (wpsdom, blstodo)) (pro
                   not (cmp_label label label_el)
                 end) blstodo;
 
-          val _ = if (!debug_trace > 2) orelse true
+          val _ = if (!wp_trace > 2)
             then let
                 val _ = print "label: ";
                 val _ = print_term label;
@@ -308,14 +355,14 @@ fun bir_wp_comp_wps prog_thm ((wps, wps_bool_sound_thm), (wpsdom, blstodo)) (pro
                 val _ = bir_exp_pretty_print wp_exp_term;
               in () end else ();
 
-          val _ = if (!debug_trace > 1)
+          val _ = if (!wp_trace > 1)
             then let
               val time_as_sec = (Time.toSeconds ((Time.now ()) - time_start));
               val time_str = LargeInt.toString time_as_sec;
               val _ = print ("it took " ^ time_str ^ "s\r\n");
             in () end else ();
 
-          val _ = if (!debug_trace > 0)
+          val _ = if (!wp_trace > 0)
             then print ("remaining labels = " ^ (Int.toString (List.length blstodo')) ^ "  \r")
             else ();
         in
@@ -324,8 +371,10 @@ fun bir_wp_comp_wps prog_thm ((wps, wps_bool_sound_thm), (wpsdom, blstodo)) (pro
         end
       | NONE =>
         let
-          val _ = if (!debug_trace > 0) then print "\n" else ();
+          val _ = if (!wp_trace > 0) then print "\n" else ();
         in (wps, wps_bool_sound_thm) end
   end;
+  
+  end (* local *)
 
 end (* bir_wpLib *)

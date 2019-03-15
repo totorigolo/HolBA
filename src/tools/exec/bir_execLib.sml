@@ -13,11 +13,11 @@ open numSyntax;
 open HolBACoreSimps;
 
 
-
 structure bir_execLib =
 struct
 
-
+  val exec_trace = ref (0:int)
+  val _ = register_trace ("bir_exec.DEBUG_LEVEL", exec_trace, 2)
 
   val log = ref (NONE : TextIO.outstream option);
 
@@ -112,17 +112,17 @@ struct
     end;
 
 (*
-val _ = debug_trace := 2;
+val _ = exec_trace := 2;
 *)
   (* executes one step and then recurses (one BIR statement per step) *)
   fun bir_exec_prog_step_iter step_n_conv thm =
     let
-      val _ = if (!debug_trace > 0) then (print_l "!") else ();
+      val _ = if (!exec_trace > 0) then (print_l "!") else ();
       val t = (snd o dest_eq o concl) thm;
       val thm1 = (step_n_conv THENC (REWRITE_CONV [OPT_CONS_REWRS])) t;
       val thm2 = TRANS thm thm1;
       val thm = thm2;
-      val _ = if (!debug_trace > 1) then (
+      val _ = if (!exec_trace > 1) then (
                 print_l "\n--------------------------------------\n";
                 print_l (term_to_string t);
                 print_l "\n--------------------------------------\n"
@@ -131,7 +131,7 @@ val _ = debug_trace := 2;
       (bir_exec_prog_step_iter step_n_conv thm)
       handle UNCHANGED =>
       (
-        if (!debug_trace > 0) then (print_l "done\n") else ();
+        if (!exec_trace > 0) then (print_l "done\n") else ();
         let
           val result = (snd o dest_eq o concl) thm;
           fun check_thm_fun _ = bir_exec_is_state_triple result;
@@ -148,7 +148,7 @@ val _ = debug_trace := 2;
   (* preprocessing and execution *)
   fun bir_exec_prog_gen prog_l_def n_max valid_prog_thm state =
     let
-      val _ = if (!debug_trace > 0) then (print_l "input validation starts\n") else ();
+      val _ = if (!exec_trace > 0) then (print_l "input validation starts\n") else ();
       (* verify that the inputs are as expected (definition theorem and program theorems) *)
       val prog_l_const = (fst o dest_eq o concl) prog_l_def;
       val prog_const = (mk_BirProgram prog_l_const);
@@ -160,11 +160,11 @@ val _ = debug_trace := 2;
                           "input validation failed"
               else
                 ();
-      val _ = if (!debug_trace > 0) then (print_l ("done\n")) else ();
-      val _ = if (!debug_trace > 0) then (print_l ("\n")) else ();
+      val _ = if (!exec_trace > 0) then (print_l ("done\n")) else ();
+      val _ = if (!exec_trace > 0) then (print_l ("\n")) else ();
       
 
-      val _ = if (!debug_trace > 0) then (print_l "preprocessing starts\n") else ();
+      val _ = if (!exec_trace > 0) then (print_l "preprocessing starts\n") else ();
       val timer = timer_start 0;
 
       val n = numSyntax.mk_numeral (Arbnumcore.fromInt n_max);
@@ -181,21 +181,21 @@ val _ = debug_trace := 2;
       val step_n_conv = (bir_exec_prog_step_n_conv block_thm_map var_eq_thms);
       val d_s = timer_stop timer;
 
-      val _ = if (!debug_trace > 0) then (print_l ("done\n")) else ();
-      val _ = if (!debug_trace > 0) then (print_l (" - " ^ d_s ^ " s - \n")) else ();
-      val _ = if (!debug_trace > 0) then (print_l ("\n")) else ();
+      val _ = if (!exec_trace > 0) then (print_l ("done\n")) else ();
+      val _ = if (!exec_trace > 0) then (print_l (" - " ^ d_s ^ " s - \n")) else ();
+      val _ = if (!exec_trace > 0) then (print_l ("\n")) else ();
 
 
-      val _ = if (!debug_trace > 0) then (print_l "execution starts\n") else ();
+      val _ = if (!exec_trace > 0) then (print_l "execution starts\n") else ();
 
       val timer = timer_start 0;
       val exec_thm =
         (CONV_RULE (RAND_CONV (REWRITE_CONV [CONJUNCT1 REVERSE_DEF])))
         (bir_exec_prog_step_iter step_n_conv thm);
       val d_s = timer_stop timer;
-      val _ = if (!debug_trace > 0) then (print_l ("done\n")) else ();
-      val _ = if (!debug_trace > 0) then (print_l (" - " ^ d_s ^ " s - \n")) else ();
-      val _ = if (!debug_trace > 0) then (print_l ("\n")) else ();
+      val _ = if (!exec_trace > 0) then (print_l ("done\n")) else ();
+      val _ = if (!exec_trace > 0) then (print_l (" - " ^ d_s ^ " s - \n")) else ();
+      val _ = if (!exec_trace > 0) then (print_l ("\n")) else ();
 
       val result_t = (snd o dest_eq o concl) exec_thm;
       val (ol, x)  = dest_pair result_t;
@@ -239,7 +239,7 @@ val _ = debug_trace := 2;
 
       val d_s = timer_stop timer;
       val _ = print_l "ok\n";
-      val _ = if (!debug_trace > 0) then (print_l (" - " ^ d_s ^ " s - \n")) else ();
+      val _ = if (!exec_trace > 0) then (print_l (" - " ^ d_s ^ " s - \n")) else ();
       val _ = print_l "\n";
 
       (* if welltypedprog theorem is not supplied, compute it *)
@@ -253,7 +253,7 @@ val _ = debug_trace := 2;
 
       val d_s = timer_stop timer;
       val _ = print_l "ok\n";
-      val _ = if (!debug_trace > 0) then (print_l (" - " ^ d_s ^ " s - \n")) else ();
+      val _ = if (!exec_trace > 0) then (print_l (" - " ^ d_s ^ " s - \n")) else ();
       val _ = print_l "\n";
 
       (* if state is not supplied, compute an empty one *)
@@ -278,7 +278,7 @@ val _ = debug_trace := 2;
 
       val d_s = timer_stop timer;
       val _ = print_l "ok\n";
-      val _ = if (!debug_trace > 0) then (print_l (" - " ^ d_s ^ " s - \n")) else ();
+      val _ = if (!exec_trace > 0) then (print_l (" - " ^ d_s ^ " s - \n")) else ();
       val _ = print_l "\n";
 
       (* now execution *)
@@ -289,7 +289,7 @@ val _ = debug_trace := 2;
       val d_s = timer_stop timer;
       val _ = print_l "ok\n";
 
-      val _ = if (!debug_trace > 0) then (print_l (" exec total: - " ^ d_s ^ " s - \n")) else ();
+      val _ = if (!exec_trace > 0) then (print_l (" exec total: - " ^ d_s ^ " s - \n")) else ();
       val _ = print_l "\n";
 
 

@@ -71,7 +71,7 @@ struct
 
       val block_l_thm_list =
            List.map (fn (i,bl) => (
-             (if ((!debug_trace) > 0) then (print "!") else ());
+             (if ((!bir_execLib.exec_trace) > 0) then (print "!") else ());
              let
                val i_n = mk_numeral (Arbnum.fromInt i);
                val (lt,_,_)  = dest_bir_block bl;

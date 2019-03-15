@@ -126,7 +126,7 @@ bir_is_well_typed_program
           (REWRITE_CONV [bir_is_valid_labels_def, label_set_thm]) THENC
           (REPEATC (
             (fn t => 
-             ((if ((!debug_trace) > 0) then (print "!") else ());
+             ((if ((!bir_execLib.exec_trace) > 0) then (print "!") else ());
               REWRITE_CONV [Once ALL_DISTINCT] t)) THENC
             (LAND_CONV (EVAL))
           ))

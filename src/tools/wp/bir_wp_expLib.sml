@@ -50,8 +50,13 @@ fun get_prog_length prog_term =
 
 
 fun gen_lbl_list wps1_term =
-  List.map (term_to_string o snd o gen_dest_Imm o dest_BL_Address) (bir_wp_fmap_to_dom_list wps1_term);
-
-
+  let
+    fun wps_id_suffix striped_label =
+      if (is_BL_Address striped_label)
+        then (term_to_string o snd o gen_dest_Imm o dest_BL_Address) striped_label
+        else (stringSyntax.fromHOLstring o dest_BL_Label) striped_label;
+  in
+    List.map wps_id_suffix (bir_wp_fmap_to_dom_list wps1_term)
+  end;
 
 end

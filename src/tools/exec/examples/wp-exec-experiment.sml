@@ -117,7 +117,36 @@ computeLib.set_skip (computeLib.the_compset) ``COND`` (SOME 1);
 val _ = bir_exec_prog_print name prog n_max validprog_o welltypedprog_o state_o;
 
 
-
+(*
+bir_env_write (BVar "WP" (BType_Imm Bit1))
+  (BVal_Imm
+     (Imm1
+        (if
+           n2w
+             (BITWISE 16 $\/
+                ((256 *
+                  BITS 7 0
+                    (if
+                       SUC (w2n (base_addr + 96w)) MOD 65536 = w2n addr
+                     then
+                       42
+                     else
+                       (w2n (base_addr + 96w) MOD 65536 =+ 0) mem2
+                         (w2n addr))) MOD 65536)
+                (BITS 7 0
+                   (if
+                      SUC (w2n (base_addr + 96w)) MOD 65536 =
+                      w2n (addr + 1w)
+                    then
+                      42
+                    else
+                      (w2n (base_addr + 96w) MOD 65536 =+ 0) mem2
+                        (w2n (addr + 1w)))) MOD 65536) =
+           42w
+         then
+           1w
+         else 0w)))
+*)
 
 
 
