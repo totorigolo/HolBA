@@ -24,6 +24,11 @@ include ../../../Holmakefile.inc
 
 # test recipes
 # ----------------------------------
+
 toy-test.exe: toy-test.uo 
+	$(HOLMOSMLC) -o $@ $<
+
+
+simple-test.exe: simple-test.uo
 	$(HOLMOSMLC) -o $@ $<
 
