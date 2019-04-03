@@ -4,7 +4,7 @@ struct
   open Abbrev
 
   val debug_trace = ref (2: int)
-  val _ = register_trace ("easy_noproof_wpLib", debug_trace, 3)
+  val _ = register_trace ("easy_noproof_wpLib", debug_trace, 4)
 
   local
 
@@ -85,15 +85,20 @@ struct
           print msg;
           print "\n"
         ) else ();
-      fun trace func_name msg = if !level_ref >= 3 then (
+      fun debug func_name msg = if !level_ref >= 3 then (
+          print (boldcyan ("[DEBUG @ " ^ lib_name ^ "::" ^ func_name ^ "] "));
+          print msg;
+          print "\n"
+        ) else ();
+      fun trace func_name msg = if !level_ref >= 4 then (
           print (boldmagenta ("[TRACE @ " ^ lib_name ^ "::" ^ func_name ^ "] "));
           print msg;
           print "\n"
         ) else ();
     in
-      (error, warn, info, trace)
+      (error, warn, info, debug, trace)
     end;
-  val (error, warn, info, trace) = gen_log_functions "easy_noproof_wpLib" debug_trace;
+  val (error, warn, info, debug, trace) = gen_log_functions "easy_noproof_wpLib" debug_trace;
 
   in (* local *)
 
@@ -234,15 +239,28 @@ struct
           handle e => raise wrap_exn "[bir_wp_simp] bir_wp_simp_CONV misbehaved" e;
 
       val _ = trace "Done.";
+
+      val _ = trace "Quickfix: EVALuating the term...";
+      val eval'ed = (snd o dest_eq o concl) (EVAL wp_simp_term)
+
+      val _ = trace "Quickfix: SIMPlificating the term...";
+      val simp'ed = (snd o dest_eq o concl) (SIMP_CONV (srw_ss()) [
+          finite_mapTheory.fmap_EXT,
+          finite_mapTheory.FDOM_FINITE,
+          finite_mapTheory.FUN_FMAP_DEF,
+          finite_mapTheory.FDOM_FUPDATE,
+          finite_mapTheory.FAPPLY_FUPDATE_THM
+        ] eval'ed)
     in
-      wp_simp_term
+      (*wp_simp_term*)
+      simp'ed
     end;
 
   fun compute_p_imp_wp_tm define_prefix prog_def
     (precond_lbl, precond_bir_tm) (postcond_lbls, postcond_bir_tm) =
     let
-      val trace = trace ("compute_p_imp_wp_tm::'" ^ define_prefix ^ "'")
-      val info = info ("compute_p_imp_wp_tm::'" ^ define_prefix ^ "'")
+      val trace = trace ("P ==> WP::'" ^ define_prefix ^ "'")
+      val info = info ("P ==> WP::'" ^ define_prefix ^ "'")
 
       val _ = info "Computing WPS...";
       val wps_tm = compute_wps_tm define_prefix prog_def (postcond_lbls, postcond_bir_tm)

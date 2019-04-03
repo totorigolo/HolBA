@@ -37,3 +37,6 @@ mem-gauss-test.exe: mem-gauss-test.uo
 
 no-mult-gauss-test.exe: no-mult-gauss-test.uo
 	$(HOLMOSMLC) -o $@ $<
+
+cjmp-test.exe: cjmp-test.uo
+	$(HOLMOSMLC) -o $@ $<
