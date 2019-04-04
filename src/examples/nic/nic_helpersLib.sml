@@ -1,0 +1,114 @@
+structure nic_helpersLib :> nic_helpersLib =
+struct
+
+  open HolKernel Parse boolLib bossLib;
+  open bslSyntax;
+  open pretty_exnLib;
+
+  val ERR = mk_HOL_ERR "nic_helpersLib";
+  val wrap_exn = Feedback.wrap_exn "nic_helpersLib";
+
+  val log_level = ref (2: int)
+  val _ = register_trace ("nic_helpersLib", log_level, 4)
+
+  val (error, warn, info, debug, trace) = logLib.gen_log_fns "nic_helpersLib" log_level;
+
+  (* End of prelude
+   ****************************************************************************)
+
+  (*****************************************************************************
+   * Misc. helpers
+   *)
+
+  fun timer_start () = Time.now();
+  fun timer_stop tm = Time.toSeconds (Time.- (Time.now(), tm));
+  fun timer_stop_str tm = Time.toString (Time.- (Time.now(), tm));
+
+  (*****************************************************************************
+   * Types used in signatures
+   *)
+
+  type bir_block = (Term.term * Term.term list * Term.term)
+
+  (*****************************************************************************
+   * BSL extensions
+   *)
+
+  val bvarstate = bvarimm32
+  val bdenstate = (bden o bvarstate)
+  val bstateval = bconst32
+  val bjmplabel_str = (bjmp o belabel_str)
+
+  fun gen_state_map_fns state_list =
+    let
+      val state_map = Redblackmap.insertList (Redblackmap.mkDict String.compare, state_list)
+      fun state_id state_name = Redblackmap.find (state_map, state_name)
+      val bstateval = (bconst32 o state_id)
+    in
+      (state_map, state_id, bstateval)
+    end
+
+  (*****************************************************************************
+   * Frequent BIR blocks
+   *)
+
+  fun block_nic_die (label_str, jmp_label_str) = (blabel_str label_str, [
+    bassign (bvarimm1 "nic_dead", btrue)
+  ], (bjmp o belabel_str) jmp_label_str)
+
+  fun bjmp_block (label_str, jmp_label_str) =
+    (blabel_str label_str, [], bjmplabel_str jmp_label_str)
+
+  (*****************************************************************************
+   * WP helpers
+   *)
+
+  fun prove_p_imp_wp proof_name prog_def precondition postcondition =
+    let
+      val proof_prefix = "[" ^ proof_name ^ "] "
+      val debug = debug "prove_p_imp_wp"
+      val trace = trace "prove_p_imp_wp"
+      val wrap_exn = wrap_exn "prove_p_imp_wp"
+
+      val p_imp_wp_bir_tm = easy_noproof_wpLib.compute_p_imp_wp_tm proof_name
+        prog_def precondition postcondition
+        handle e => raise pp_exn_s (proof_prefix ^ "compute_p_imp_wp_tm failed") (wrap_exn e)
+
+      val _ = trace ("p_imp_wp_bir_tm:\n" ^ Hol_pp.term_to_string p_imp_wp_bir_tm)
+
+      (* BIR expr => SMT-ready expr*)
+      val smt_ready_tm = bir_exp_to_wordsLib.bir2bool p_imp_wp_bir_tm
+        handle e => raise pp_exn_s (proof_prefix ^ "bir2bool failed") (wrap_exn e)
+
+      val _ = trace ("smt_ready_tm:\n" ^ Hol_pp.term_to_string smt_ready_tm)
+
+      (* Prove it using an SMT solver *)
+      val start_time = timer_start ();
+      val smt_thm = HolSmtLib.Z3_ORACLE_PROVE smt_ready_tm
+        handle sat_exn => (* Pretty-exn + try to show a SAT model if log_level=DEBUG *)
+          let
+            (* Wrap the exn, and pretty-print it to the user *)
+            val wrapped_exn = pp_exn_s (proof_prefix ^ "Z3_ORACLE_PROVE failed") (wrap_exn sat_exn);
+
+            (* Show a SAT model if log_level=DEBUG *)
+            val _ = if not (!log_level >= 3) then () else
+              let
+                fun print_model model = List.foldl
+                  (fn ((name, tm), _) => (print (" - " ^ name ^ ": "); Hol_pp.print_term tm))
+                  () (rev model)
+                val _ = debug "Asking Z3 for a SAT model..."
+                val model = Z3_SAT_modelLib.Z3_GET_SAT_MODEL (mk_neg smt_ready_tm)
+                val _ = (debug "SAT model:"; print_model model; print "\n")
+              in () end
+                handle _ => debug "Failed to compute a SAT model. Ignoring.";
+          in
+            raise wrapped_exn
+          end
+      val _ = info (proof_prefix ^ "SMT solver took: " ^ (timer_stop_str start_time) ^ " sec");
+
+      val _ = trace "Solver reported UNSAT."
+    in
+      (p_imp_wp_bir_tm, smt_ready_tm, smt_thm)
+    end
+
+end (* nic_helpersLib *)

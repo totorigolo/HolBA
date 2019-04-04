@@ -1,6 +1,8 @@
 signature nic_programLib =
 sig
 
-  val nic_program: Term.term
+  type bir_block = term * term list * term;
+
+  val nic_program: term
 
 end (* nic_programLib *)

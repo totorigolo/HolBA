@@ -10,7 +10,10 @@ val _ = Globals.show_assums := true;
 *)
 
 val log_level = ref (2: int)
-val (error, warn, info, trace) = logLib.gen_toplevel_log_fns "print-prog-test" log_level;
+val (error, warn, info, debug, trace) = logLib.gen_toplevel_log_fns "print-prog-test" log_level;
+
+(* End of prelude
+ ****************************************************************************)
 
 (* Configuration *)
 val dot_path = "./cfg.dot";

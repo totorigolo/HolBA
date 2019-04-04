@@ -48,13 +48,18 @@ struct
           print msg;
           print "\n"
         ) else ();
-      fun trace msg = if !level_ref >= 3 then (
+      fun debug msg = if !level_ref >= 3 then (
+          print (boldcyan ("[DEBUG @ " ^ lib_name ^ "] "));
+          print msg;
+          print "\n"
+        ) else ();
+      fun trace msg = if !level_ref >= 4 then (
           print (boldmagenta ("[TRACE @ " ^ lib_name ^ "] "));
           print msg;
           print "\n"
         ) else ();
     in
-      (error, warn, info, trace)
+      (error, warn, info, debug, trace)
     end;
 
   fun gen_log_fns lib_name level_ref =
@@ -74,13 +79,18 @@ struct
           print msg;
           print "\n"
         ) else ();
-      fun trace func_name msg = if !level_ref >= 3 then (
+      fun debug func_name msg = if !level_ref >= 3 then (
+          print (boldcyan ("[DEBUG @ " ^ lib_name ^ "::" ^ func_name ^ "] "));
+          print msg;
+          print "\n"
+        ) else ();
+      fun trace func_name msg = if !level_ref >= 4 then (
           print (boldmagenta ("[TRACE @ " ^ lib_name ^ "::" ^ func_name ^ "] "));
           print msg;
           print "\n"
         ) else ();
     in
-      (error, warn, info, trace)
+      (error, warn, info, debug, trace)
     end;
 
   end (* local *)

@@ -28,3 +28,6 @@ include ../../Holmakefile.inc
 
 print-prog-test.exe: print-prog-test.uo
 	$(HOLMOSMLC) -o $@ $<
+
+early-wp-test.exe: early-wp-test.uo
+	$(HOLMOSMLC) -o $@ $<
