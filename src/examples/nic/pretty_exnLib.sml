@@ -48,7 +48,8 @@ struct
       boldred "HOL_ERR:\n"
        ^ boldcyan " - Structure: " ^ yellow origin_structure ^ "\n"
        ^ boldcyan " - Function: " ^ yellow origin_function ^ "\n"
-       ^ boldcyan " - Message: " ^ yellow message ^ "\n"
+       ^ boldcyan " - Message: " ^ message ^ "\n"
+       ^ "\n"
      );
 
   in
