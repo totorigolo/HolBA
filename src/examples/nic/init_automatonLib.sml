@@ -34,33 +34,36 @@ struct
    * Initialisation automaton
    *)
 
-  val (init_state_map, _, bstateval_init) = gen_state_map_fns [
-    ("it_power_on", 1),
-    ("it_reset", 2),
-    ("it_initialize_hdp_cp", 3),
-    ("it_initialized", 4)
+  val (init_state_map, bstateval_init) = (nic_stateLib.init_state_map, nic_stateLib.bstateval_init)
+
+  val init_blocks =
+    ([bjmp_block ("init_entry", "init_try_s1")]
+
+    (* Autonomous transition jump *)
+  @ bstate_cases ("nic_init_state", "init_unknown_state", bstateval_init) [
+    ("init_try_s1", "it_power_on",          "init_no_autonomous_step_state"),
+    ("init_try_s2", "it_reset",             "init_s2_entry"),
+    ("init_try_s3", "it_initialize_hdp_cp", "init_no_autonomous_step_state"),
+    ("init_try_s4", "it_initialized",       "init_no_autonomous_step_state")
   ]
 
-  val init_blocks = [
-      bjmp_block ("init_entry", "init_try_s1"),
+  @ [
+    bjmp_block ("init_s2_entry", "init_s2_set_regs"),
+    (blabel_str "init_s2_set_regs", [
+      bassign (bvarimm1 "nic_regs_CPDMA_SOFT_RESET", bfalse),
+      bassign (bvarstate "nic_init_state", bstateval_init "it_initialize_hdp_cp")
+    ], bjmplabel_str "init_s2_epilogue"),
+    bjmp_block ("init_s2_epilogue", "init_s2_end"),
+    bjmp_block ("init_s2_end", "init_epilogue")
+  ]
 
-      (blabel_str "init_try_s1", [],
-        bcjmp (beq (bdenstate "init_state", bstateval_init "it_reset"),
-               belabel_str "init_s1_entry",
-               belabel_str "init_unknown_state")),
-
-      bjmp_block ("init_s1_entry", "init_s1_set_regs"),
-      (blabel_str "init_s1_set_regs", [
-        bassign (bvarimm1 "nic_regs_CPDMA_SOFT_RESET", bfalse),
-        bassign (bvarstate "init_state", bstateval_init "it_initialize_hdp_cp")
-      ], bjmplabel_str "init_s1_epilogue"),
-      bjmp_block ("init_s1_epilogue", "init_s1_end"),
-      bjmp_block ("init_s1_end", "init_epilogue"),
-
-      block_nic_die ("init_unknown_state", "init_epilogue"),
-      bjmp_block ("init_epilogue", "init_end"),
-      bjmp_block ("init_end", "end")
-    ];
-    val init_program = bprog_list alpha init_blocks;
+  @ [
+    block_nic_die ("init_no_autonomous_step_state", "init_epilogue"),
+    block_nic_die ("init_unknown_state", "init_epilogue"),
+    bjmp_block ("init_epilogue", "init_end"),
+    bjmp_block ("init_end", "end")
+  ])
+    handle e => raise pp_exn e;
+  val init_program = bprog_list alpha init_blocks;
 
 end (* init_automatonLib *)

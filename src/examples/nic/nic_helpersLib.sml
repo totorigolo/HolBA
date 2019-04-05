@@ -43,10 +43,12 @@ struct
     let
       val state_map = Redblackmap.insertList (Redblackmap.mkDict String.compare, state_list)
       fun state_id state_name = Redblackmap.find (state_map, state_name)
+        handle e => raise wrap_exn ("state_id::State not found: '" ^ state_name ^ "'") e
       val bstateval = (bconst32 o state_id)
     in
       (state_map, state_id, bstateval)
     end
+    handle e => raise pp_exn e
 
   (*****************************************************************************
    * Frequent BIR blocks
@@ -58,6 +60,16 @@ struct
 
   fun bjmp_block (label_str, jmp_label_str) =
     (blabel_str label_str, [], bjmplabel_str jmp_label_str)
+
+  fun bstate_cases (state_var_name, unknown_state_lbl_str, (bstateval_fn: string -> term)) jumps =
+    snd (List.foldl
+      (fn ((lbl_str, state_name, then_lbl_str), (next_lbl_str, acc)) =>
+        (lbl_str, (blabel_str lbl_str, [], bcjmp (beq (bdenstate state_var_name,
+                                                       bstateval_fn state_name),
+                                                  belabel_str then_lbl_str,
+                                                  belabel_str next_lbl_str))::acc))
+      (unknown_state_lbl_str, []) (rev jumps))
+    handle e => raise wrap_exn "bstates_cases" e
 
   (*****************************************************************************
    * WP helpers

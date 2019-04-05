@@ -53,7 +53,7 @@ val (_, smt_ready_tm, init_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
   (* Precondition *) (
     blabel_str "init_entry",
     bandl [
-      beq (bdenstate "init_state", init_automatonLib.bstateval_init "it_reset"),
+      beq (bdenstate "nic_init_state", nic_stateLib.bstateval_init "it_reset"),
       beq ((bden o bvarimm1) "nic_dead", bfalse)
     ]
   )

@@ -22,8 +22,10 @@ struct
    *)
 
   val nic_program = bprog_list alpha (
-        [(blabel_str "entry", [], bjmplabel_str "init_entry")]
+(*        [(blabel_str "entry", [], bjmplabel_str "init_entry")]*)
+        [(blabel_str "entry", [], bjmplabel_str "tx_entry")]
       @ init_automatonLib.init_blocks
+      @ tx_automatonLib.tx_blocks
       @ [(blabel_str "end", [], bhalt (bconst32 0))]
     );
 

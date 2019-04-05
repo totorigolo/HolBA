@@ -20,6 +20,10 @@ sig
   val block_nic_die: (string * string) -> bir_block
   val bjmp_block: (string * string) -> bir_block
 
+  val bstate_cases: (string * string * (string -> term))
+                 -> (string * string * string) list
+                 -> bir_block list
+
   (* WP helpers *)
   val prove_p_imp_wp: string -> thm -> (term * term) -> (term list * term) -> (term * term * thm)
 

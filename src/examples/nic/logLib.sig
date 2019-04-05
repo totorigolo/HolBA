@@ -5,7 +5,7 @@ sig
   (* Log function generating library.                                         *)
   (*                                                                          *)
   (* Usage:                                                                   *)
-  (*   val (error, warn, info, debug, trace) = gen_log_fns                           *)
+  (*   val (error, warn, info, debug, trace) = gen_log_fns                    *)
   (*     "my_fancyLib" ref_to_debug_level;                                    *)
   (*                                                                          *)
   (* Where ref_to_debug_level goes at least from 0 to 4 (inclusive).          *)
