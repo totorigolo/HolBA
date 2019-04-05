@@ -1,6 +1,9 @@
 structure bir_wpLib =
 struct
 
+  val debug_trace = ref (1: int)
+  val _ = register_trace ("bir_wpLib.DEBUG_LEVEL", debug_trace, 2)
+
   local
 
   open HolKernel Parse boolLib bossLib liteLib simpLib;
@@ -365,7 +368,7 @@ struct
                     not (cmp_label label label_el)
                   end) blstodo;
 
-            val _ = if (!debug_trace > 2) orelse true
+            val _ = if (!debug_trace > 2)
               then let
                   val _ = print "label: ";
                   val _ = print_term label;
