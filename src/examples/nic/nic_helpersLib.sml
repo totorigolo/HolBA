@@ -8,10 +8,10 @@ struct
   val ERR = mk_HOL_ERR "nic_helpersLib";
   val wrap_exn = Feedback.wrap_exn "nic_helpersLib";
 
-  val log_level = ref (2: int)
-  val _ = register_trace ("nic_helpersLib", log_level, 4)
+  val level_log = ref (logLib.level_info: int)
+  val _ = register_trace ("nic_helpersLib", level_log, logLib.level_max)
 
-  val (error, warn, info, debug, trace) = logLib.gen_log_fns "nic_helpersLib" log_level;
+  val {error, warn, info, debug, trace, ...} = logLib.gen_fn_log_fns "nic_helpersLib" level_log;
 
   (* End of prelude
    ****************************************************************************)
@@ -97,13 +97,13 @@ struct
       (* Prove it using an SMT solver *)
       val start_time = timer_start ();
       val smt_thm = HolSmtLib.Z3_ORACLE_PROVE smt_ready_tm
-        handle sat_exn => (* Pretty-exn + try to show a SAT model if log_level=DEBUG *)
+        handle sat_exn => (* Pretty-exn + try to show a SAT model if level_log=DEBUG *)
           let
             (* Wrap the exn, and pretty-print it to the user *)
             val wrapped_exn = pp_exn_s (proof_prefix ^ "Z3_ORACLE_PROVE failed") (wrap_exn sat_exn);
 
-            (* Show a SAT model if log_level=DEBUG *)
-            val _ = if not (!log_level >= 3) then () else
+            (* Show a SAT model if level_log=DEBUG *)
+            val _ = if not (!level_log >= 3) then () else
               let
                 fun print_model model = List.foldl
                   (fn ((name, tm), _) => (print (" - " ^ name ^ ": "); Hol_pp.print_term tm))

@@ -36,8 +36,8 @@ val _ = Feedback.set_trace "easy_noproof_wpLib" 2;
 val _ = Feedback.set_trace "Define.storage_message" 1;
 *)
 
-val log_level = ref (2: int)
-val (error, warn, info, debug, trace) = logLib.gen_toplevel_log_fns "init-wp-test" log_level;
+val level_log = ref (logLib.level_info: int)
+val {error, warn, info, debug, trace, ...} = logLib.gen_fn_log_fns "init-wp-test" level_log;
 
 (* End of prelude
  ****************************************************************************)

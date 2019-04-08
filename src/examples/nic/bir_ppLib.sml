@@ -8,10 +8,10 @@ struct
   val ERR = mk_HOL_ERR "bir_ppLib";
   val wrap_exn = Feedback.wrap_exn "bir_ppLib";
 
-  val log_level = ref (2: int)
-  val _ = register_trace ("bir_ppLib", log_level, 4)
+  val level_log = ref (logLib.level_info: int)
+  val _ = register_trace ("bir_ppLib", level_log, logLib.level_max)
 
-  val (error, warn, info, debug, trace) = logLib.gen_log_fns "bir_ppLib" log_level;
+  val {error, warn, info, debug, trace, ...} = logLib.gen_fn_log_fns "bir_ppLib" level_log;
 
   (* End of prelude
    ****************************************************************************)

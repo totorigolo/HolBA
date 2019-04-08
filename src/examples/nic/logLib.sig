@@ -17,20 +17,29 @@ sig
   (*                                                                          *)
   (****************************************************************************)
 
-  val gen_log_fns: string -> int ref -> (
-      (string -> string -> unit)
-    * (string -> string -> unit)
-    * (string -> string -> unit)
-    * (string -> string -> unit)
-    * (string -> string -> unit)
-    );
+  val level_error: int
+  val level_warn: int
+  val level_info: int
+  val level_debug: int
+  val level_trace: int
+  val level_max: int
 
-  val gen_toplevel_log_fns: string -> int ref -> (
-      (string -> unit)
-    * (string -> unit)
-    * (string -> unit)
-    * (string -> unit)
-    * (string -> unit)
-    );
+  type log_functions = {
+    error: string -> unit,
+    warn : string -> unit,
+    info : string -> unit,
+    debug: string -> unit,
+    trace: string -> unit
+  }
+  val gen_log_fns: string -> int ref -> log_functions;
+
+  type fn_log_functions = {
+    error: string -> string -> unit,
+    warn : string -> string -> unit,
+    info : string -> string -> unit,
+    debug: string -> string -> unit,
+    trace: string -> string -> unit
+  }
+  val gen_fn_log_fns: string -> int ref -> fn_log_functions;
 
 end

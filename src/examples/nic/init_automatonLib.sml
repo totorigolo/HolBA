@@ -9,10 +9,10 @@ struct
   val ERR = mk_HOL_ERR "init_automatonLib";
   val wrap_exn = Feedback.wrap_exn "init_automatonLib";
 
-  val log_level = ref (2: int)
-  val _ = register_trace ("init_automatonLib", log_level, 4)
+  val level_log = ref (logLib.level_info: int)
+  val _ = register_trace ("init_automatonLib", level_log, logLib.level_max)
 
-  val (error, warn, info, debug, trace) = logLib.gen_log_fns "init_automatonLib" log_level;
+  val {error, warn, info, debug, trace, ...} = logLib.gen_fn_log_fns "init_automatonLib" level_log;
 
   (* End of prelude
    ****************************************************************************)

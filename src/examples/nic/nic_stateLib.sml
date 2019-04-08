@@ -9,10 +9,10 @@ struct
   val ERR = mk_HOL_ERR "nic_stateLib";
   val wrap_exn = Feedback.wrap_exn "nic_stateLib";
 
-  val log_level = ref (2: int)
-  val _ = register_trace ("nic_stateLib", log_level, 4)
+  val level_log = ref (logLib.level_info: int)
+  val _ = register_trace ("nic_stateLib", level_log, logLib.level_max)
 
-  val (error, warn, info, debug, trace) = logLib.gen_log_fns "nic_stateLib" log_level;
+  val {error, warn, info, debug, trace, ...} = logLib.gen_fn_log_fns "nic_stateLib" level_log;
 
   (* End of prelude
    ****************************************************************************)

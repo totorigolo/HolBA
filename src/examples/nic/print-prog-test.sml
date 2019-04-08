@@ -9,8 +9,8 @@ val _ = Globals.show_types := true;
 val _ = Globals.show_assums := true;
 *)
 
-val log_level = ref (2: int)
-val (error, warn, info, debug, trace) = logLib.gen_toplevel_log_fns "print-prog-test" log_level;
+val level_log = ref (logLib.level_info: int)
+val {error, warn, info, debug, trace, ...} = logLib.gen_fn_log_fns "print-prog-test" level_log;
 
 (* End of prelude
  ****************************************************************************)

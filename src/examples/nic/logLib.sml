@@ -31,66 +31,87 @@ struct
 
   in (* local *)
 
-  fun gen_toplevel_log_fns lib_name level_ref =
+  val level_error = 0
+  val level_warn = 1
+  val level_info = 2
+  val level_debug = 3
+  val level_trace = 4
+  val level_max = level_trace
+
+  type log_functions = {
+    error: string -> unit,
+    warn : string -> unit,
+    info : string -> unit,
+    debug: string -> unit,
+    trace: string -> unit
+  }
+  fun gen_log_fns lib_name level_ref =
     let
-      fun error msg = if !level_ref >= 0 then (
+      fun error msg = if !level_ref >= level_error then (
           print (boldred ("[ERROR @ " ^ lib_name ^ "] "));
           print (red msg);
           print "\n"
         ) else ();
-      fun warn msg = if !level_ref >= 1 then (
+      fun warn msg = if !level_ref >= level_warn then (
           print (boldyellow ("[ WARN @ " ^ lib_name ^ "] "));
           print msg;
           print "\n"
         ) else ();
-      fun info msg = if !level_ref >= 2 then (
+      fun info msg = if !level_ref >= level_info then (
           print (boldblue ("[ INFO @ " ^ lib_name ^ "] "));
           print msg;
           print "\n"
         ) else ();
-      fun debug msg = if !level_ref >= 3 then (
+      fun debug msg = if !level_ref >= level_debug then (
           print (boldcyan ("[DEBUG @ " ^ lib_name ^ "] "));
           print msg;
           print "\n"
         ) else ();
-      fun trace msg = if !level_ref >= 4 then (
+      fun trace msg = if !level_ref >= level_trace then (
           print (boldmagenta ("[TRACE @ " ^ lib_name ^ "] "));
           print msg;
           print "\n"
         ) else ();
     in
-      (error, warn, info, debug, trace)
+      {error=error, warn=warn, info=info, debug=debug, trace=trace}
     end;
 
-  fun gen_log_fns lib_name level_ref =
+  type fn_log_functions = {
+    error: string -> string -> unit,
+    warn : string -> string -> unit,
+    info : string -> string -> unit,
+    debug: string -> string -> unit,
+    trace: string -> string -> unit
+  }
+  fun gen_fn_log_fns lib_name level_ref =
     let
-      fun error func_name msg = if !level_ref >= 0 then (
+      fun error func_name msg = if !level_ref >= level_error then (
           print (boldred ("[ERROR @ " ^ lib_name ^ "::" ^ func_name ^ "] "));
           print (red msg);
           print "\n"
         ) else ();
-      fun warn func_name msg = if !level_ref >= 1 then (
+      fun warn func_name msg = if !level_ref >= level_warn then (
           print (boldyellow ("[ WARN @ " ^ lib_name ^ "::" ^ func_name ^ "] "));
           print msg;
           print "\n"
         ) else ();
-      fun info func_name msg = if !level_ref >= 2 then (
+      fun info func_name msg = if !level_ref >= level_info then (
           print (boldblue ("[ INFO @ " ^ lib_name ^ "::" ^ func_name ^ "] "));
           print msg;
           print "\n"
         ) else ();
-      fun debug func_name msg = if !level_ref >= 3 then (
+      fun debug func_name msg = if !level_ref >= level_debug then (
           print (boldcyan ("[DEBUG @ " ^ lib_name ^ "::" ^ func_name ^ "] "));
           print msg;
           print "\n"
         ) else ();
-      fun trace func_name msg = if !level_ref >= 4 then (
+      fun trace func_name msg = if !level_ref >= level_trace then (
           print (boldmagenta ("[TRACE @ " ^ lib_name ^ "::" ^ func_name ^ "] "));
           print msg;
           print "\n"
         ) else ();
     in
-      (error, warn, info, debug, trace)
+      {error=error, warn=warn, info=info, debug=debug, trace=trace}
     end;
 
   end (* local *)
