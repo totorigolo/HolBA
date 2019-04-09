@@ -13,6 +13,11 @@ struct
 
   val {error, warn, info, debug, trace, ...} = logLib.gen_fn_log_fns "nic_helpersLib" level_log;
 
+  fun term_to_ppstring term = (ppstring pp_term) term
+  fun thm_to_ppstring thm = (ppstring pp_thm) thm
+  fun pprint_term term = ((print o ppstring pp_term) term; print "\n")
+  fun pprint_thm thm = ((print o ppstring pp_thm) thm; print "\n")
+
   (* End of prelude
    ****************************************************************************)
 
@@ -94,13 +99,13 @@ struct
         prog_def precondition postcondition
         handle e => raise pp_exn_s (proof_prefix ^ "compute_p_imp_wp_tm failed") (wrap_exn e)
 
-      val _ = trace ("p_imp_wp_bir_tm:\n" ^ Hol_pp.term_to_string p_imp_wp_bir_tm)
+      val _ = trace ("p_imp_wp_bir_tm:\n" ^ term_to_ppstring p_imp_wp_bir_tm)
 
       (* BIR expr => SMT-ready expr*)
       val smt_ready_tm = bir_exp_to_wordsLib.bir2bool p_imp_wp_bir_tm
         handle e => raise pp_exn_s (proof_prefix ^ "bir2bool failed") (wrap_exn e)
 
-      val _ = trace ("smt_ready_tm:\n" ^ Hol_pp.term_to_string smt_ready_tm)
+      val _ = trace ("smt_ready_tm:\n" ^ term_to_ppstring smt_ready_tm)
 
       (* Prove it using an SMT solver *)
       val start_time = timer_start ();
@@ -114,7 +119,7 @@ struct
             val _ = if not (!level_log >= 3) then () else
               let
                 fun print_model model = List.foldl
-                  (fn ((name, tm), _) => (print (" - " ^ name ^ ": "); Hol_pp.print_term tm))
+                  (fn ((name, tm), _) => (print (" - " ^ name ^ ": "); pprint_term tm))
                   () (rev model)
                 val _ = debug "Asking Z3 for a SAT model..."
                 val model = Z3_SAT_modelLib.Z3_GET_SAT_MODEL (mk_neg smt_ready_tm)

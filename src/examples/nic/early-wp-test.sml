@@ -39,12 +39,17 @@ val _ = Feedback.set_trace "Define.storage_message" 1;
 val level_log = ref (logLib.level_info: int)
 val {error, warn, info, debug, trace, ...} = logLib.gen_fn_log_fns "init-wp-test" level_log;
 
+fun term_to_ppstring term = (ppstring pp_term) term
+fun thm_to_ppstring thm = (ppstring pp_thm) thm
+fun pprint_term term = ((print o ppstring pp_term) term; print "\n")
+fun pprint_thm thm = ((print o ppstring pp_thm) thm; print "\n")
+
 (* End of prelude
  ****************************************************************************)
 
 (* Load and print the program *)
 val nic_program_def = Define `nic_program = ^(nic_programLib.nic_program)`;
-val _ = (Hol_pp.print_thm nic_program_def; print "\n");
+val _ = (pprint_thm nic_program_def; print "\n");
 
 (*  *)
 val (_, _, init_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
@@ -64,7 +69,7 @@ val (_, _, init_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
   )
 val _ = info "Successfully proved: init automaton doesn't die"
 val _ = if !level_log >= logLib.level_info
-  then (Hol_pp.print_thm init_autonomous_step_doesnt_die_thm; print "\n")
+  then (pprint_thm init_autonomous_step_doesnt_die_thm; print "\n")
   else ();
 
 (*  *)
@@ -85,5 +90,5 @@ val (_, _, tx_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
   )
 val _ = info "Successfully proved: tx automaton doesn't die"
 val _ = if !level_log >= logLib.level_info
-  then (Hol_pp.print_thm tx_autonomous_step_doesnt_die_thm; print "\n")
+  then (pprint_thm tx_autonomous_step_doesnt_die_thm; print "\n")
   else ();

@@ -14,6 +14,11 @@ val _ = Globals.show_assums := true;
 val level_log = ref (logLib.level_info: int)
 val {error, warn, info, debug, trace, ...} = logLib.gen_fn_log_fns "print-prog-test" level_log;
 
+fun term_to_ppstring term = (ppstring pp_term) term
+fun thm_to_ppstring thm = (ppstring pp_thm) thm
+fun pprint_term term = ((print o ppstring pp_term) term; print "\n")
+fun pprint_thm thm = ((print o ppstring pp_thm) thm; print "\n")
+
 (* End of prelude
  ****************************************************************************)
 
@@ -27,7 +32,7 @@ val program_tm = nic_programLib.nic_program;
 val _ = info "Done.";
 
 (* Print the program *)
-val _ = Hol_pp.print_term program_tm;
+val _ = pprint_term program_tm;
 
 (* Export the CFG *)
 val _ = info "Exporting the CFG...";

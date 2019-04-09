@@ -13,135 +13,215 @@ struct
 
   val {error, warn, info, debug, trace, ...} = logLib.gen_fn_log_fns "bir_ppLib" level_log;
 
+  fun term_to_ppstring term = (ppstring pp_term) term
+  fun thm_to_ppstring thm = (ppstring pp_thm) thm
+  fun pprint_term term = ((print o ppstring pp_term) term; print "\n")
+  fun pprint_thm thm = ((print o ppstring pp_thm) thm; print "\n")
+
   (* End of prelude
    ****************************************************************************)
-
-  (*****************************************************************************
-   * Colors
-   *)
-
-  fun checkterm pfx s = (* This is from HOL/Parse *)
-    case OS.Process.getEnv "TERM" of
-        NONE => s
-      | SOME term => if String.isPrefix "xterm" term then pfx ^ s ^ "\027[0m" else s
-  val bold = checkterm "\027[1m"
-  val boldred = checkterm "\027[31m\027[1m"
-  val boldgreen = checkterm "\027[32m\027[1m"
-  val boldyellow = checkterm "\027[33m\027[1m"
-  val boldblue = checkterm "\027[34m\027[1m"
-  val boldmagenta = checkterm "\027[35m\027[1m"
-  val boldcyan = checkterm "\027[36m\027[1m"
-  val red = checkterm "\027[31m"
-  val green = checkterm "\027[32m"
-  val yellow = checkterm "\027[33m"
-  val blue = checkterm "\027[34m"
-  val magenta = checkterm "\027[35m"
-  val cyan = checkterm "\027[36m"
-  val dim = checkterm "\027[2m"
-  val clear = checkterm "\027[0m"
 
   (*****************************************************************************
    * Pretty printers
    *)
 
-  fun hol_string_printer gs be sys ppfns gravs depth t =
+  fun paren ppfns consistency enabled depth user_printer =
     let
       open Portable term_pp_types smpp
       infix >>
-      val {add_string=str, add_break=brk,...} =
-        ppfns: term_pp_types.ppstream_funs
-      val sml_string = stringSyntax.fromHOLstring t
+      val {add_string,ublock,ustyle,...} = ppfns: term_pp_types.ppstream_funs
+      val colors = [
+        RedBrown,   Green,      BrownGreen, DarkBlue,
+        Purple,     BlueGreen,  OrangeRed,  VividGreen,
+        Yellow,     Blue,       PinkPurple, LightBlue
+      ]
+      val n_colors = List.length colors
+      val idx = ((depth mod n_colors) + n_colors) mod n_colors
+      val color = List.nth (colors, idx)
     in
-      str (green ("\"" ^ sml_string ^ "\""))
+      if enabled then ublock consistency 1
+        (ustyle [FG color] (add_string "(")
+         >> user_printer
+         >> ustyle [FG color] (add_string ")"))
+      else user_printer
     end
-      handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
 
-  fun bir_immtype_t_printer gs be sys ppfns gravs depth t =
+  fun hol_string_printer _ _ _ {add_string,ustyle,...} _ _ term =
+    ustyle [FG Green] (add_string ("\"" ^ (stringSyntax.fromHOLstring term) ^ "\""))
+
+  fun bir_immtype_t_printer _ _ _ ppfns _ _ term =
     let
-      open Portable term_pp_types smpp
-      infix >>
-      val {add_string=str, add_break=brk,...} =
-        ppfns: term_pp_types.ppstream_funs
-      val bit_str = if bir_immSyntax.is_Bit1 t then "Bit1"
-        else if bir_immSyntax.is_Bit8 t then "Bit8"
-        else if bir_immSyntax.is_Bit16 t then "Bit16"
-        else if bir_immSyntax.is_Bit32 t then "Bit32"
-        else if bir_immSyntax.is_Bit64 t then "Bit64"
-        else if bir_immSyntax.is_Bit128 t then "Bit128"
+      val {add_string,ustyle,...} = ppfns
+      val bit_str = if bir_immSyntax.is_Bit1 term then "Bit1"
+        else if bir_immSyntax.is_Bit8 term then "Bit8"
+        else if bir_immSyntax.is_Bit16 term then "Bit16"
+        else if bir_immSyntax.is_Bit32 term then "Bit32"
+        else if bir_immSyntax.is_Bit64 term then "Bit64"
+        else if bir_immSyntax.is_Bit128 term then "Bit128"
         else raise ERR "bir_immtype_t_printer" "unknown bir_immtype_t"
     in
-      str (blue bit_str)
+      ustyle [FG Blue] (add_string bit_str)
     end
       handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
 
-  fun bir_imm_printer gs be sys ppfns gravs depth t =
+  fun bir_imm_printer grammars pp_backend sysprinter ppfns gravities depth term =
     let
       open Portable term_pp_types smpp
       infix >>
-      val {add_string=str, add_break=brk,...} =
-        ppfns: term_pp_types.ppstream_funs
-      val (bit_str, dest_fn) = if bir_immSyntax.is_Imm1 t then ("Imm1", bir_immSyntax.dest_Imm1)
-        else if bir_immSyntax.is_Imm8 t then ("Imm8", bir_immSyntax.dest_Imm8)
-        else if bir_immSyntax.is_Imm16 t then ("Imm16", bir_immSyntax.dest_Imm16)
-        else if bir_immSyntax.is_Imm32 t then ("Imm32", bir_immSyntax.dest_Imm32)
-        else if bir_immSyntax.is_Imm64 t then ("Imm64", bir_immSyntax.dest_Imm64)
-        else if bir_immSyntax.is_Imm128 t then ("Imm128", bir_immSyntax.dest_Imm128)
+      val {add_string,ublock,ustyle,...} = ppfns: term_pp_types.ppstream_funs
+      fun syspr gravs t = sysprinter {gravs = gravs, depth = depth - 1, binderp = false} t
+      open bir_immSyntax
+      val (bit_str, dest_fn) =
+        if bir_immSyntax.is_Imm1 term then ("Imm1", dest_Imm1)
+        else if is_Imm8 term then ("Imm8", dest_Imm8)
+        else if is_Imm16 term then ("Imm16", dest_Imm16)
+        else if is_Imm32 term then ("Imm32", dest_Imm32)
+        else if is_Imm64 term then ("Imm64", dest_Imm64)
+        else if is_Imm128 term then ("Imm128", dest_Imm128)
         else raise ERR "bir_imm_printer" "unknown bir_imm type"
+      val word_tm = dest_fn term
     in
-      str "("
-      >> str (blue bit_str)
-      >> str " "
-      >> str (magenta (Hol_pp.term_to_string (dest_fn t)))
-      >> str ")"
+      paren ppfns PP.CONSISTENT true depth
+        (ustyle [FG Blue] (add_string bit_str)
+         >> add_string " "
+         >> ustyle [FG Purple] (syspr (Top,Top,Top) word_tm))
     end
       handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
 
-  fun bir_block_printer gs be sys ppfns gravs depth t =
+  fun bir_exp_printer grammars pp_backend sysprinter ppfns gravities depth term =
     let
+      val warn = warn "bir_exp_printer"
+
       open Portable term_pp_types smpp
       infix >>
-      val {add_string=str, add_break=brk,...} =
-        ppfns: term_pp_types.ppstream_funs
 
-      val stmt_fmt = (fn s => (boldgreen " - ") ^ s ^ "\n")
+      val (type_gm, term_gm) = grammars
+      val (parent_g, left_g, right_g) = gravities
 
-      val block = t
-      val (label_tm, stmts_tm, end_statement_tm) = dest_bir_block block
-      val stmt_tms = (fst o listSyntax.dest_list) stmts_tm
+      val {add_string,add_break,ublock,ustyle,...} = ppfns: term_pp_types.ppstream_funs
+      fun syspr gravs t = sysprinter {gravs = gravs, depth = depth - 1, binderp = false} t
+
+      val paren_required =
+               (case right_g of Prec(p, _) => p > 70 | _ => false)
+        orelse (case left_g  of Prec(_, n) => n = GrammarSpecials.fnapp_special | _ => false)
+
+      open bir_expSyntax bir_exp_immSyntax
+
+      fun print_exp exp =
+        if is_BExp_Const exp then
+          let val prec = Prec (2000, "bir_exp_const")
+          in
+            ublock PP.CONSISTENT 0
+              (add_string "BExp_Const"
+               >> add_string " "
+               >> (syspr (prec,prec,prec) (dest_BExp_Const exp)))
+          end
+        else if is_BExp_Den exp then
+          let val prec = Prec (2000, "bir_exp_den")
+          in
+            ublock PP.CONSISTENT 0
+              (add_string "BExp_Den"
+               >> add_string " "
+               >> (syspr (prec,prec,prec) (dest_BExp_Den exp)))
+          end
+        else if is_BExp_Cast exp then raise term_pp_types.UserPP_Failed
+        else if is_BExp_UnaryExp exp then
+          let
+            val (uop_tm, arg_tm) = dest_BExp_UnaryExp exp
+            val uop_str =
+              if is_BIExp_ChangeSign uop_tm then "BExp_ChangeSign"
+              else if is_BIExp_Not uop_tm then "BExp_Not"
+              else if is_BIExp_CLZ uop_tm then "BExp_CLZ"
+              else if is_BIExp_CLS uop_tm then "BExp_CLS"
+              else raise (warn ("Unknown BIExp: " ^ (term_to_ppstring uop_tm));
+                term_pp_types.UserPP_Failed)
+            val prec = Prec (2000, "bir_exp_bexp")
+          in
+            ublock PP.CONSISTENT 0
+              (add_string uop_str
+               >> add_break (1, 2)
+               >> (syspr (prec,prec,prec) arg_tm))
+          end
+        else if is_BExp_BinExp exp then
+          let
+            val (bop_tm, lhs_tm, rhs_tm) = dest_BExp_BinExp exp
+            val bop_str =
+              if is_BIExp_And bop_tm then "BExp_And"
+              else if is_BIExp_Or bop_tm then "BExp_Or"
+              else if is_BIExp_Xor bop_tm then "BExp_Xor"
+              else if is_BIExp_Plus bop_tm then "BExp_Plus"
+              else if is_BIExp_Minus bop_tm then "BExp_Minus"
+              else if is_BIExp_Mult bop_tm then "BExp_Mult"
+              else if is_BIExp_Div bop_tm then "BExp_Div"
+              else if is_BIExp_SignedDiv bop_tm then "BExp_SignedDiv"
+              else if is_BIExp_Mod bop_tm then "BExp_Mod"
+              else if is_BIExp_SignedMod bop_tm then "BExp_SignedMod"
+              else if is_BIExp_LeftShift bop_tm then "BExp_LeftShift"
+              else if is_BIExp_RightShift bop_tm then "BExp_RightShift"
+              else if is_BIExp_SignedRightShift bop_tm then "BExp_SignedRightShift"
+              else raise (warn ("Unknown BIExp: " ^ (term_to_ppstring bop_tm));
+                term_pp_types.UserPP_Failed)
+            val prec = Prec (2000, "bir_exp_bexp")
+          in
+            ublock PP.CONSISTENT 0
+              (add_string bop_str
+               >> add_break (1, 2)
+               >> ublock PP.CONSISTENT 0
+                 ((syspr (prec,prec,prec) lhs_tm)
+                  >> add_break (1, 0)
+                  >> (syspr (prec,prec,prec) rhs_tm)))
+          end
+        else if is_BExp_BinPred exp then
+          let
+            val (bpred_tm, lhs_tm, rhs_tm) = dest_BExp_BinPred exp
+            val bpred_str =
+              if is_BIExp_Equal bpred_tm then "BExp_Equal"
+              else if is_BIExp_NotEqual bpred_tm then "BExp_NotEqual"
+              else if is_BIExp_LessThan bpred_tm then "BExp_LessThan"
+              else if is_BIExp_SignedLessThan bpred_tm then "BExp_SignedLessThan"
+              else if is_BIExp_LessOrEqual bpred_tm then "BExp_LessOrEqual"
+              else if is_BIExp_SignedLessOrEqual bpred_tm then "BExp_SignedLessOrEqual"
+              else raise (warn ("Unknown BIExp: " ^ (term_to_ppstring bpred_tm));
+                term_pp_types.UserPP_Failed)
+            val prec = Prec (2000, "bir_exp_bpred")
+          in
+            ublock PP.CONSISTENT 0
+              (add_string bpred_str
+               >> add_break (1, 2)
+               >> ublock PP.CONSISTENT 0
+                 ((syspr (prec,prec,prec) lhs_tm)
+                  >> add_break (1, 0)
+                  >> (syspr (prec,prec,prec) rhs_tm)))
+          end
+        else if is_BExp_MemEq exp then raise term_pp_types.UserPP_Failed
+        else if is_BExp_IfThenElse exp then
+          let
+            val (cond_tm, then_tm, else_tm) = dest_BExp_IfThenElse exp
+            val prec = Prec (2000, "bir_exp_cond")
+          in
+            ublock PP.CONSISTENT 0
+              ((ublock PP.CONSISTENT 0
+                (add_string "BExp_If"
+                 >> add_break (1, 2)
+                 >> ublock PP.CONSISTENT 0 (syspr (prec,prec,prec) cond_tm)))
+               >> add_break (1, 0)
+               >> (ublock PP.CONSISTENT 0
+                (add_string "BExp_Then"
+                 >> add_break (1, 2)
+                 >> ublock PP.CONSISTENT 0 (syspr (prec,prec,prec) then_tm)))
+               >> add_break (1, 0)
+               >> (ublock PP.CONSISTENT 0
+                (add_string "BExp_Else"
+                 >> add_break (1, 2)
+                 >> ublock PP.CONSISTENT 0 (syspr (prec,prec,prec) else_tm))))
+          end
+        else if is_BExp_Load exp then raise term_pp_types.UserPP_Failed
+        else if is_BExp_Store exp then raise term_pp_types.UserPP_Failed
+        else raise (pp_exn (Fail "bir_pp: Unknown BExp"); term_pp_types.UserPP_Failed)
     in
-      str (dim "--------------------------------------\n")
-      >> str (dim "--------------------------------------\n")
-      >> str (boldgreen " label: ") >> str (Hol_pp.term_to_string label_tm)
-      >> str "\n"
-      >> (if (List.length stmt_tms = 0) then str (boldgreen "  stmts: []\n") else
-        (str (boldgreen "  stmts: [\n")
-          >> List.foldr (op >>) (str "") (List.map (str o stmt_fmt o Hol_pp.term_to_string) stmt_tms)
-          >> str (boldgreen " ]\n")))
-      >> str (boldgreen " end_stmt: ") >> str (Hol_pp.term_to_string end_statement_tm)
-      >> str "\n"
+      paren ppfns PP.CONSISTENT paren_required depth (print_exp term)
     end
-      handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
-
-  fun bir_program_printer gs be sys ppfns gravs depth t =
-    let
-      open Portable term_pp_types smpp
-      infix >>
-      val {add_string=str, add_break=brk,...} =
-        ppfns: term_pp_types.ppstream_funs
-
-      val program_tm = t
-      val blocks = (fst o listSyntax.dest_list o dest_BirProgram) program_tm;
-      val n_blocks = List.length blocks
-      val n_blocks_str = Int.toString n_blocks
-    in
-      str "BirProgram ["
-        >> str (yellow ("(* " ^ n_blocks_str ^ " blocks *)"))
-        >> str "\n"
-      >> List.foldr (op >>) (str "") (List.map (str o Hol_pp.term_to_string) blocks)
-      >> str "] "
-        >> str (yellow "(* end of BirProgram *)")
-    end
-      handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
+      handle e => (pp_exn e; raise term_pp_types.UserPP_Failed)
 
   (*****************************************************************************
    * List of all available pretty printers
@@ -150,9 +230,8 @@ struct
   val pretty_printers = [
     ("HOL_string", ``str: string``, hol_string_printer),
     ("bir_immtype_t", ``bit: bir_immtype_t``, bir_immtype_t_printer),
-    ("bir_imm_t", ``bir_imm: bir_imm_t``, bir_imm_printer)
-(*    ("bir_block_t", ``bir_block: 'a bir_block_t``, bir_block_printer),*)
-(*    ("bir_program_t", ``bir_program: 'a bir_program_t``, bir_program_printer)*)
+    ("bir_imm_t", ``bir_imm: bir_imm_t``, bir_imm_printer),
+    ("bir_exp_t", ``bir_exp_t: bir_exp_t``, bir_exp_printer)
   ]
 
   (*****************************************************************************
