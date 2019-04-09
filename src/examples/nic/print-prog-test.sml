@@ -3,6 +3,8 @@ open HolKernel Parse boolLib bossLib;
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 val _ = Globals.linewidth := 100;
 
+val _ = bir_ppLib.install_bir_pretty_printers ();
+
 (*
 val _ = Globals.show_tags := true;
 val _ = Globals.show_types := true;

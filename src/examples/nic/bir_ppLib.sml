@@ -150,9 +150,9 @@ struct
   val pretty_printers = [
     ("HOL_string", ``str: string``, hol_string_printer),
     ("bir_immtype_t", ``bit: bir_immtype_t``, bir_immtype_t_printer),
-    ("bir_imm_t", ``bir_imm: bir_imm_t``, bir_imm_printer),
-    ("bir_block_t", ``bir_block: 'a bir_block_t``, bir_block_printer),
-    ("bir_program_t", ``bir_program: 'a bir_program_t``, bir_program_printer)
+    ("bir_imm_t", ``bir_imm: bir_imm_t``, bir_imm_printer)
+(*    ("bir_block_t", ``bir_block: 'a bir_block_t``, bir_block_printer),*)
+(*    ("bir_program_t", ``bir_program: 'a bir_program_t``, bir_program_printer)*)
   ]
 
   (*****************************************************************************
