@@ -39,14 +39,22 @@ struct
   val bstateval = bconst32
   val bjmplabel_str = (bjmp o belabel_str)
 
-  fun gen_state_map_fns state_list =
+  fun gen_state_map_fns automaton_name state_list =
     let
+      fun wrap_exn2 fn_name msg exn = wrap_exn (fn_name ^ "@" ^ automaton_name  ^ "::" ^ msg) exn
+
       val state_map = Redblackmap.insertList (Redblackmap.mkDict String.compare, state_list)
-      fun state_id state_name = Redblackmap.find (state_map, state_name)
-        handle e => raise wrap_exn ("state_id::State not found: '" ^ state_name ^ "'") e
-      val bstateval = (bconst32 o state_id)
+
+      fun state_id_of state_name = fst (Redblackmap.find (state_map, state_name))
+        handle e => raise wrap_exn2 "state_id_of" ("State not found: '" ^ state_name ^ "'") e
+
+      fun is_autonomous_step state_name = snd (Redblackmap.find (state_map, state_name))
+        handle e => raise wrap_exn2 "is_autonomous_step" ("State not found: '" ^ state_name ^ "'") e
+
+      val autonomous_step_list = List.map fst (List.filter (snd o snd) state_list)
+      val bstateval = (bconst32 o state_id_of)
     in
-      (state_map, state_id, bstateval)
+      (state_id_of, is_autonomous_step, autonomous_step_list, bstateval)
     end
     handle e => raise pp_exn e
 
@@ -118,7 +126,7 @@ struct
           end
       val _ = info (proof_prefix ^ "SMT solver took: " ^ (timer_stop_str start_time) ^ " sec");
 
-      val _ = trace "Solver reported UNSAT."
+      val _ = debug "Solver reported UNSAT."
     in
       (p_imp_wp_bir_tm, smt_ready_tm, smt_thm)
     end

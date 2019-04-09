@@ -4,7 +4,7 @@ struct
   open HolKernel Parse boolLib bossLib;
   open bslSyntax;
   open pretty_exnLib;
-  open nic_helpersLib;
+  open nic_helpersLib nic_stateLib;
 
   val ERR = mk_HOL_ERR "tx_automatonLib";
   val wrap_exn = Feedback.wrap_exn "tx_automatonLib";
@@ -20,10 +20,6 @@ struct
   (*****************************************************************************
    * Transmission automaton
    *)
-
-  val (init_state_map, bstateval_init) = (nic_stateLib.init_state_map, nic_stateLib.bstateval_init)
-  val (tx_state_map, bstateval_tx) = (nic_stateLib.tx_state_map, nic_stateLib.bstateval_tx)
-  val (td_state_map, bstateval_td) = (nic_stateLib.td_state_map, nic_stateLib.bstateval_td)
 
   val tx_blocks =
     ([bjmp_block ("tx_entry", "tx_try_s1")]
@@ -64,7 +60,7 @@ struct
     @ [
       bjmp_block ("tx_s6_entry", "tx_s6_set_nic_regs_TX0_CP"),
       (blabel_str "tx_s6_set_nic_regs_TX0_CP", [
-        bassign (bvarimm1 "nic_regs_TX0_CP", (bden o bvarimm32) "nic_tx_eop_bd_pa")
+        bassign (bvarimm32 "nic_regs_TX0_CP", (bden o bvarimm32) "nic_tx_eop_bd_pa")
       ], bjmplabel_str "tx_s6_set_nic_interrupt"),
       (blabel_str "tx_s6_set_nic_interrupt", [
         bassign (bvarimm1 "nic_interrupt", bite ((bden o bvarimm1) "env_tx_assert_interrupt",

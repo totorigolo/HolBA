@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 open bslSyntax;
 open pretty_exnLib;
-open nic_helpersLib;
+open nic_helpersLib nic_stateLib;
 
 (* Load the dependencies in interactive sessions *)
 val _ = if !Globals.interactive then (
@@ -10,7 +10,7 @@ val _ = if !Globals.interactive then (
 
 val _ = if !Globals.interactive then () else (
   Feedback.set_trace "HolSmtLib" 0;
-  Feedback.set_trace "bir_wpLib.DEBUG_LEVEL" 0;
+  Feedback.set_trace "bir_wpLib.DEBUG_LEVEL" 1;
   Feedback.set_trace "easy_noproof_wpLib" 2;
   Feedback.set_trace "nic_helpersLib" 4;
   Feedback.set_trace "Define.storage_message" 0;
@@ -43,22 +43,47 @@ val {error, warn, info, debug, trace, ...} = logLib.gen_fn_log_fns "init-wp-test
  ****************************************************************************)
 
 (* Load and print the program *)
-val init_program_def = Define `init_program = ^(init_automatonLib.init_program)`;
-val _ = (Hol_pp.print_thm init_program_def; print "\n");
+val nic_program_def = Define `nic_program = ^(nic_programLib.nic_program)`;
+val _ = (Hol_pp.print_thm nic_program_def; print "\n");
 
 (*  *)
-val (_, smt_ready_tm, init_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
-  "init_autonomous_step_doesnt_die"
-  (* prog_def *) init_program_def
+val (_, _, init_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
+  "init_automaton_doesnt_die"
+  (* prog_def *) nic_program_def
   (* Precondition *) (
     blabel_str "init_entry",
     bandl [
-      beq (bdenstate "nic_init_state", nic_stateLib.bstateval_init "it_reset"),
-      beq ((bden o bvarimm1) "nic_dead", bfalse)
+      beq ((bden o bvarimm1) "nic_dead", bfalse),
+      borl (List.map (fn s => beq (bdenstate "nic_init_state", bstateval_init s))
+            init_autonomous_step_list)
     ]
   )
   (* Postcondition *) (
     [blabel_str "init_end"],
     beq ((bden o bvarimm1) "nic_dead", bfalse)
   )
-val _ = (Hol_pp.print_thm init_autonomous_step_doesnt_die_thm; print "\n")
+val _ = info "Successfully proved: init automaton doesn't die"
+val _ = if !level_log >= logLib.level_info
+  then (Hol_pp.print_thm init_autonomous_step_doesnt_die_thm; print "\n")
+  else ();
+
+(*  *)
+val (_, _, tx_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
+  "tx_automaton_doesnt_die"
+  (* prog_def *) nic_program_def
+  (* Precondition *) (
+    blabel_str "tx_entry",
+    bandl [
+      beq ((bden o bvarimm1) "nic_dead", bfalse),
+      borl (List.map (fn s => beq (bdenstate "nic_tx_state", bstateval_tx s))
+            tx_autonomous_step_list)
+    ]
+  )
+  (* Postcondition *) (
+    [blabel_str "tx_end"],
+    beq ((bden o bvarimm1) "nic_dead", bfalse)
+  )
+val _ = info "Successfully proved: tx automaton doesn't die"
+val _ = if !level_log >= logLib.level_info
+  then (Hol_pp.print_thm tx_autonomous_step_doesnt_die_thm; print "\n")
+  else ();

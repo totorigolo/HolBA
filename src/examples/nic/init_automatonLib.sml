@@ -4,7 +4,7 @@ struct
   open HolKernel Parse boolLib bossLib;
   open bslSyntax;
   open pretty_exnLib;
-  open nic_helpersLib;
+  open nic_helpersLib nic_stateLib;
 
   val ERR = mk_HOL_ERR "init_automatonLib";
   val wrap_exn = Feedback.wrap_exn "init_automatonLib";
@@ -33,8 +33,6 @@ struct
   (*****************************************************************************
    * Initialisation automaton
    *)
-
-  val (init_state_map, bstateval_init) = (nic_stateLib.init_state_map, nic_stateLib.bstateval_init)
 
   val init_blocks =
     ([bjmp_block ("init_entry", "init_try_s1")]

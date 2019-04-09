@@ -10,9 +10,10 @@ sig
   val bstateval: int -> term
   val bjmplabel_str: string -> term
 
-  val gen_state_map_fns: (string * int) list -> (
-      (string, int) Redblackmap.dict
-    * (string -> int)
+  val gen_state_map_fns: string -> (string * (int * bool)) list -> (
+      (string -> int)
+    * (string -> bool)
+    * (string list)
     * (string -> term)
   )
 
