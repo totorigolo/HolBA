@@ -238,7 +238,7 @@ struct
         simp_thm
           handle e => raise wrap_exn "[bir_wp_simp] bir_wp_simp_CONV misbehaved" e;
 
-      val _ = trace "Done.";
+      val _ = trace ("Quickfix: term before quickfix:\n" ^ ((ppstring pp_term) wp_simp_term));
 
       val _ = trace "Quickfix: EVALuating the term...";
       val eval'ed = (snd o dest_eq o concl) (EVAL wp_simp_term)
@@ -251,6 +251,8 @@ struct
           finite_mapTheory.FDOM_FUPDATE,
           finite_mapTheory.FAPPLY_FUPDATE_THM
         ] eval'ed)
+
+      val _ = trace "Done.";
     in
       (*wp_simp_term*)
       simp'ed

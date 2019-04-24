@@ -232,10 +232,10 @@ struct
         val var_wps1 = ``wps':(bir_label_t |-> bir_exp_t)``;
         val thm = SPECL [wps, var_wps1] prog_l_thm;
 
-        (* this took a while, it should not have been?! *)
+        (*  *)
         val thm = MP thm wps_bool_sound_thm;
 
-        (* this takes a bit, not anymore? *)
+        (*  *)
         val wps_eval_restrict_consts = !bir_wp_comp_wps_iter_step2_consts;
         val wps1_thm = computeLib.RESTR_EVAL_CONV wps_eval_restrict_consts
           (list_mk_comb
