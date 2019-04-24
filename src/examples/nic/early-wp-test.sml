@@ -2,6 +2,7 @@ open HolKernel Parse boolLib bossLib;
 open bslSyntax;
 open pretty_exnLib;
 open nic_helpersLib nic_stateLib;
+open nic_common_invariantsLib;
 
 (* Load the dependencies in interactive sessions *)
 val _ = if !Globals.interactive then (
@@ -55,26 +56,57 @@ val bstateval_td = #bstateval td_state
 val nic_program_def = Define `nic_program = ^(nic_programLib.nic_program)`;
 val _ = (pprint_thm nic_program_def; print "\n");
 
-(*  *)
+
+(* Init automaton: NIC doesn't die in autonomous transition *)
 val (_, _, init_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
   "init_automaton_doesnt_die"
   (* prog_def *) nic_program_def
   (* Precondition *) (
     blabel_str "init_entry",
     bandl [
-      beq ((bden o bvarimm1) "nic_dead", bfalse),
+      invariant_nic_not_dead,
+      (* Current init automaton state is an autonomous one *)
       borl (List.map (fn s => beq (bdenstate "nic_init_state", bstateval_init s))
             (#autonomous_step_list init_state))
     ]
   )
   (* Postcondition *) (
     [blabel_str "init_end"],
-    beq ((bden o bvarimm1) "nic_dead", bfalse)
+    invariant_nic_not_dead
   )
 val _ = info "Successfully proved: init automaton doesn't die"
 val _ = if !level_log >= logLib.level_info
   then (pprint_thm init_autonomous_step_doesnt_die_thm; print "\n")
   else ();
+
+(* Init automaton: NIC *dies* in not-autonomous transition *)
+val init_not_autonom_states = List.filter
+  (fn state_name => not ((#is_autonomous_step init_state) state_name))
+  (#state_list init_state)
+
+val (_, _, init_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
+  "init_automaton_dies"
+  (* prog_def *) nic_program_def
+  (* Precondition *) (
+    blabel_str "init_entry",
+    bandl [
+      invariant_nic_not_dead,
+      borl [
+        beq (bdenstate "nic_init_state", bstateval_init "it_power_on"),
+        beq (bdenstate "nic_init_state", bstateval_init "it_initialize_hdp_cp"),
+        beq (bdenstate "nic_init_state", bstateval_init "it_initialized")
+      ]
+    ]
+  )
+  (* Postcondition *) (
+    [blabel_str "init_end"],
+    bnot invariant_nic_not_dead
+  )
+val _ = info "Successfully proved: init automaton dies"
+val _ = if !level_log >= logLib.level_info
+  then (pprint_thm init_autonomous_step_doesnt_die_thm; print "\n")
+  else ();
+
 
 (*  *)
 val (_, _, tx_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
@@ -83,14 +115,14 @@ val (_, _, tx_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
   (* Precondition *) (
     blabel_str "tx_entry",
     bandl [
-      beq ((bden o bvarimm1) "nic_dead", bfalse),
+      invariant_nic_not_dead,
       borl (List.map (fn s => beq (bdenstate "nic_tx_state", bstateval_tx s))
             (#autonomous_step_list tx_state))
     ]
   )
   (* Postcondition *) (
     [blabel_str "tx_end"],
-    beq ((bden o bvarimm1) "nic_dead", bfalse)
+    invariant_nic_not_dead
   )
 val _ = info "Successfully proved: tx automaton doesn't die"
 val _ = if !level_log >= logLib.level_info
