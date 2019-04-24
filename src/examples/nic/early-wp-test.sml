@@ -47,6 +47,10 @@ fun pprint_thm thm = ((print o ppstring pp_thm) thm; print "\n")
 (* End of prelude
  ****************************************************************************)
 
+val bstateval_init = #bstateval init_state
+val bstateval_tx = #bstateval tx_state
+val bstateval_td = #bstateval td_state
+
 (* Load and print the program *)
 val nic_program_def = Define `nic_program = ^(nic_programLib.nic_program)`;
 val _ = (pprint_thm nic_program_def; print "\n");
@@ -60,7 +64,7 @@ val (_, _, init_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
     bandl [
       beq ((bden o bvarimm1) "nic_dead", bfalse),
       borl (List.map (fn s => beq (bdenstate "nic_init_state", bstateval_init s))
-            init_autonomous_step_list)
+            (#autonomous_step_list init_state))
     ]
   )
   (* Postcondition *) (
@@ -81,7 +85,7 @@ val (_, _, tx_autonomous_step_doesnt_die_thm) = prove_p_imp_wp
     bandl [
       beq ((bden o bvarimm1) "nic_dead", bfalse),
       borl (List.map (fn s => beq (bdenstate "nic_tx_state", bstateval_tx s))
-            tx_autonomous_step_list)
+            (#autonomous_step_list tx_state))
     ]
   )
   (* Postcondition *) (

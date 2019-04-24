@@ -10,12 +10,16 @@ sig
   val bstateval: int -> term
   val bjmplabel_str: string -> term
 
-  val gen_state_map_fns: string -> (string * (int * bool)) list -> (
-      (string -> int)
-    * (string -> bool)
-    * (string list)
-    * (string -> term)
-  )
+  type state_helpers = {
+    state_list:             string list,
+    autonomous_step_list:   string list,
+
+    state_id_of:            string -> int,
+    is_autonomous_step:     string -> bool,
+
+    bstateval:              string -> term
+  }
+  val gen_state_helpers: string -> (string * (int * bool)) list -> state_helpers
 
   (* Frequent BIR blocks *)
   val block_nic_die: (string * string) -> bir_block

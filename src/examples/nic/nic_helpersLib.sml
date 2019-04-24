@@ -44,24 +44,47 @@ struct
   val bstateval = bconst32
   val bjmplabel_str = (bjmp o belabel_str)
 
-  fun gen_state_map_fns automaton_name state_list =
+  type state_helpers = {
+    state_list:             string list,
+    autonomous_step_list:   string list,
+
+    state_id_of:            string -> int,
+    is_autonomous_step:     string -> bool,
+
+    bstateval:              string -> term
+  }
+  fun gen_state_helpers automaton_name state_list =
     let
-      fun wrap_exn2 fn_name msg exn = wrap_exn (fn_name ^ "@" ^ automaton_name  ^ "::" ^ msg) exn
+      (********* Private stuff *********)
 
-      val state_map = Redblackmap.insertList (Redblackmap.mkDict String.compare, state_list)
+      (* Map from state names to state info *)
+      val state_map = Redblackmap.insertList (Redblackmap.mkDict String.compare,
+        List.map (fn (name, (id, is_autonomous)) =>
+          (name, {id=id, name=name, is_autonomous=is_autonomous})) state_list)
 
-      fun state_id_of state_name = fst (Redblackmap.find (state_map, state_name))
-        handle e => raise wrap_exn2 "state_id_of" ("State not found: '" ^ state_name ^ "'") e
+      fun find_state name = Redblackmap.find (state_map, name)
+        handle e => raise wrap_exn ("State not found: '" ^ name ^ "'") e
 
-      fun is_autonomous_step state_name = snd (Redblackmap.find (state_map, state_name))
-        handle e => raise wrap_exn2 "is_autonomous_step" ("State not found: '" ^ state_name ^ "'") e
+      (********* Public stuff *********)
 
-      val autonomous_step_list = List.map fst (List.filter (snd o snd) state_list)
+      val state_list = List.map fst (Redblackmap.listItems state_map)
+      val autonomous_step_list = List.map fst (List.filter (#is_autonomous o snd) (Redblackmap.listItems state_map))
+
+      fun state_id_of state_name = #id (find_state state_name)
+      fun is_autonomous_step state_name = #is_autonomous (find_state state_name)
+
       val bstateval = (bconst32 o state_id_of)
     in
-      (state_id_of, is_autonomous_step, autonomous_step_list, bstateval)
+      {
+        state_list=state_list,
+        autonomous_step_list=autonomous_step_list,
+
+        state_id_of=state_id_of,
+        is_autonomous_step=is_autonomous_step,
+
+        bstateval=bstateval
+      }
     end
-    handle e => raise pp_exn e
 
   (*****************************************************************************
    * Frequent BIR blocks

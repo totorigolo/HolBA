@@ -21,6 +21,10 @@ struct
    * Transmission automaton
    *)
 
+  val bstateval_init = #bstateval init_state
+  val bstateval_tx = #bstateval tx_state
+  val bstateval_td = #bstateval td_state
+
   val tx_blocks =
     ([bjmp_block ("tx_entry", "tx_try_s1")]
 

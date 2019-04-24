@@ -34,11 +34,13 @@ struct
    * Initialisation automaton
    *)
 
+  val bstateval = #bstateval init_state
+
   val init_blocks =
     ([bjmp_block ("init_entry", "init_try_s1")]
 
     (* Autonomous transition jump *)
-  @ bstate_cases ("nic_init_state", "init_unknown_state", bstateval_init) [
+  @ bstate_cases ("nic_init_state", "init_unknown_state", bstateval) [
     ("init_try_s1", "it_power_on",          "init_no_autonomous_step_state"),
     ("init_try_s2", "it_reset",             "init_s2_entry"),
     ("init_try_s3", "it_initialize_hdp_cp", "init_no_autonomous_step_state"),
@@ -49,7 +51,7 @@ struct
     bjmp_block ("init_s2_entry", "init_s2_set_regs"),
     (blabel_str "init_s2_set_regs", [
       bassign (bvarimm1 "nic_regs_CPDMA_SOFT_RESET", bfalse),
-      bassign (bvarstate "nic_init_state", bstateval_init "it_initialize_hdp_cp")
+      bassign (bvarstate "nic_init_state", (bstateval) "it_initialize_hdp_cp")
     ], bjmplabel_str "init_s2_epilogue"),
     bjmp_block ("init_s2_epilogue", "init_s2_end"),
     bjmp_block ("init_s2_end", "init_epilogue")
