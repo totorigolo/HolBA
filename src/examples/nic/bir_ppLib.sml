@@ -105,24 +105,34 @@ struct
                (case right_g of Prec(p, _) => p > 70 | _ => false)
         orelse (case left_g  of Prec(_, n) => n = GrammarSpecials.fnapp_special | _ => false)
 
-      open bir_expSyntax bir_exp_immSyntax
+      open bir_expSyntax bir_immSyntax bir_exp_immSyntax
 
       fun print_exp exp =
         if is_BExp_Const exp then
-          let val prec = Prec (2000, "bir_exp_const")
+          let
+            val prec = Prec (2000, "bir_exp_const")
+            val is_false = (exp = mk_BExp_Const (mk_Imm_of_int 1 0))
+            val is_true = (exp = mk_BExp_Const (mk_Imm_of_int 1 1))
           in
-            ublock PP.CONSISTENT 0
-              (add_string "BExp_Const"
-               >> add_string " "
-               >> (syspr (prec,prec,prec) (dest_BExp_Const exp)))
+            if is_false then
+              (paren_required, fn () => add_string "BExp_False")
+            else if is_true then
+              (paren_required, fn () => add_string "BExp_True")
+            else
+              (paren_required, fn () =>
+               ublock PP.CONSISTENT 0
+                (add_string "BExp_Const"
+                 >> add_string " "
+                 >> (syspr (prec,prec,prec) (dest_BExp_Const exp))))
           end
         else if is_BExp_Den exp then
           let val prec = Prec (2000, "bir_exp_den")
           in
-            ublock PP.CONSISTENT 0
+            (paren_required, fn () =>
+             ublock PP.CONSISTENT 0
               (add_string "BExp_Den"
                >> add_string " "
-               >> (syspr (prec,prec,prec) (dest_BExp_Den exp)))
+               >> (syspr (prec,prec,prec) (dest_BExp_Den exp))))
           end
         else if is_BExp_Cast exp then raise term_pp_types.UserPP_Failed
         else if is_BExp_UnaryExp exp then
@@ -135,12 +145,13 @@ struct
               else if is_BIExp_CLS uop_tm then "BExp_CLS"
               else raise (warn ("Unknown BIExp: " ^ (term_to_ppstring uop_tm));
                 term_pp_types.UserPP_Failed)
-            val prec = Prec (2000, "bir_exp_bexp")
+            val prec = Prec (2000, uop_str)
           in
-            ublock PP.CONSISTENT 0
+            (paren_required, fn () =>
+             ublock PP.CONSISTENT 0
               (add_string uop_str
                >> add_break (1, 2)
-               >> (syspr (prec,prec,prec) arg_tm))
+               >> (syspr (prec,prec,prec) arg_tm)))
           end
         else if is_BExp_BinExp exp then
           let
@@ -161,15 +172,24 @@ struct
               else if is_BIExp_SignedRightShift bop_tm then "BExp_SignedRightShift"
               else raise (warn ("Unknown BIExp: " ^ (term_to_ppstring bop_tm));
                 term_pp_types.UserPP_Failed)
-            val prec = Prec (2000, "bir_exp_bexp")
+            val prec = Prec (2000, bop_str)
+            val delim_required =
+              case parent_g of
+                  Prec(_, parent_g_name) => not (parent_g_name = bop_str)
+                | _ => true
+            fun delim wrap body = if delim_required then wrap body else body
+            val new_depth = if delim_required then depth - 1 else depth
+            fun syspr gravs t = sysprinter {gravs = gravs, depth = new_depth, binderp = false} t
           in
-            ublock PP.CONSISTENT 0
-              (add_string bop_str
-               >> add_break (1, 2)
-               >> ublock PP.CONSISTENT 0
-                 ((syspr (prec,prec,prec) lhs_tm)
-                  >> add_break (1, 0)
-                  >> (syspr (prec,prec,prec) rhs_tm)))
+            (delim_required, fn () =>
+             delim (fn body =>
+              ublock PP.CONSISTENT 0
+                (add_string bop_str
+                 >> add_break (1, 2)
+                 >> ublock PP.CONSISTENT 0 body))
+              ((syspr (prec,prec,prec) lhs_tm)
+               >> add_break (1, 0)
+               >> (syspr (prec,prec,prec) rhs_tm)))
           end
         else if is_BExp_BinPred exp then
           let
@@ -183,15 +203,16 @@ struct
               else if is_BIExp_SignedLessOrEqual bpred_tm then "BExp_SignedLessOrEqual"
               else raise (warn ("Unknown BIExp: " ^ (term_to_ppstring bpred_tm));
                 term_pp_types.UserPP_Failed)
-            val prec = Prec (2000, "bir_exp_bpred")
+            val prec = Prec (2000, bpred_str)
           in
-            ublock PP.CONSISTENT 0
+            (paren_required, fn () =>
+             ublock PP.CONSISTENT 0
               (add_string bpred_str
                >> add_break (1, 2)
                >> ublock PP.CONSISTENT 0
                  ((syspr (prec,prec,prec) lhs_tm)
                   >> add_break (1, 0)
-                  >> (syspr (prec,prec,prec) rhs_tm)))
+                  >> (syspr (prec,prec,prec) rhs_tm))))
           end
         else if is_BExp_MemEq exp then raise term_pp_types.UserPP_Failed
         else if is_BExp_IfThenElse exp then
@@ -199,7 +220,8 @@ struct
             val (cond_tm, then_tm, else_tm) = dest_BExp_IfThenElse exp
             val prec = Prec (2000, "bir_exp_cond")
           in
-            ublock PP.CONSISTENT 0
+            (paren_required, fn () =>
+             ublock PP.CONSISTENT 0
               ((ublock PP.CONSISTENT 0
                 (add_string "BExp_If"
                  >> add_break (1, 2)
@@ -213,15 +235,17 @@ struct
                >> (ublock PP.CONSISTENT 0
                 (add_string "BExp_Else"
                  >> add_break (1, 2)
-                 >> ublock PP.CONSISTENT 0 (syspr (prec,prec,prec) else_tm))))
+                 >> ublock PP.CONSISTENT 0 (syspr (prec,prec,prec) else_tm)))))
           end
         else if is_BExp_Load exp then raise term_pp_types.UserPP_Failed
         else if is_BExp_Store exp then raise term_pp_types.UserPP_Failed
-        else raise (pp_exn (Fail "bir_pp: Unknown BExp"); term_pp_types.UserPP_Failed)
+        else raise term_pp_types.UserPP_Failed
+
+      val (paren_required, printer) = print_exp term
     in
-      paren ppfns PP.CONSISTENT paren_required depth (print_exp term)
+      paren ppfns PP.CONSISTENT paren_required depth (printer ())
     end
-      handle e => (pp_exn e; raise term_pp_types.UserPP_Failed)
+      handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
 
   (*****************************************************************************
    * List of all available pretty printers
