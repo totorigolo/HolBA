@@ -19,7 +19,7 @@ struct
     open HolBACoreSimps;
 
     (* Local theories *)
-    open bir_htTheory;
+    open bir_htTheory bir_htSyntax;
 
     val holba_ss = (std_ss++holBACore_ss)
 
@@ -83,6 +83,17 @@ struct
 	thm1_rhs
       end
     ;
+
+    fun assume_bir_prog_has_no_assumes_tac prog_def =
+      let
+        val goal_tm = mk_comb (bir_prog_has_no_assumes_tm, (lhs o concl) prog_def)
+        val goal = SIMP_CONV holba_ss [
+          prog_def, bir_prog_has_no_assumes_def,
+          bir_block_has_no_assumes_def, bir_stmtsB_has_no_assumes_def,
+          bir_stmtB_is_not_assume_def] goal_tm
+      in
+        ASSUME_TAC goal
+      end
 
   end
 
